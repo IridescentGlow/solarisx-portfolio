@@ -136,6 +136,8 @@ const Navbar = () => {
                 <a
                   key={index}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={social.name}
                   title={social.name}
                   className="transition-colors duration-300 hover:text-white"

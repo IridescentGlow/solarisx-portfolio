@@ -58,6 +58,8 @@ const Contact = () => {
                   <a
                     key={index}
                     href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     aria-label={social.name}
                     title={social.name}
                     className="transition-colors duration-200 hover:text-white/80"
