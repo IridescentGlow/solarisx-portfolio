@@ -137,14 +137,14 @@ const Works = () => {
             </div>
             {/* divider */}
             <div className="w-full h-0.5 bg-[var(--color-border)]" />
-            {/* framework */}
+            {/* stack */}
             <div className="flex px-10 text-xs leading-loose uppercase transtion-all duration-500 md:text-sm gap-x-5 md:group-hover:px-12">
-              {project.frameworks.map((framework) => (
+              {project.stack.map((tech) => (
                 <p
-                  key={framework.id}
+                  key={tech}
                   className="text-white transition-colors duration-500 md:group-hover:text-white"
                 >
-                  {framework.name}
+                  {tech}
                 </p>
               ))}
             </div>
