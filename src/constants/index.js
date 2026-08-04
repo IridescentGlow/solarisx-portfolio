@@ -83,22 +83,28 @@ export const servicesData = [
   },
 ];
 
-// Proof of Craft — evidence-first engineering projects.
-// PLACEHOLDER CONTENT (not real shipped work): drafted around the creator's
-// stated background — Linux, cybersecurity, networking, full-stack, systems.
-// Every name is prefixed "[Placeholder]" and every outcome says so. Replace
-// with real projects (3–6 strongest) before launch. Exactly one `featured: true`
-// (the lead row). `stack` is a plain string array. `image`/`bgImage` reuse
-// template assets as visual placeholders — replace with real screenshots.
+// Proof of Craft — evidence-first project index.
+// PLACEHOLDER CONTENT (not real shipped work): the entries below mirror the
+// governing identity in UX_ARCHITECTURE_BLUEPRINT §3 — a visual storyteller /
+// creative technologist who uses technology as a creative medium, not an
+// engineer who also edits. They track the first three Capability Map areas in
+// order: Visual Storytelling (featured, per §3's "featured reel = highest
+// visual priority"), Motion Design & Visual Effects, then Creative Technology.
+// Systems & Technical Exploration is supporting depth and deliberately does not
+// headline a project here.
+// Replace with real work (3–6 strongest) before launch. Exactly one
+// `featured: true` (the lead row). `stack` is a plain string array.
+// `image`/`bgImage` reuse template assets as visual placeholders — replace with
+// real stills/frames.
 export const projects = [
   {
     id: 1,
-    name: "[Placeholder] Real-time network telemetry platform",
+    name: "[Placeholder] Signature reel",
     outcome:
-      "Placeholder — streams and visualizes live traffic/host metrics from Linux sensors. Replace with a real project and a concrete result (a latency, throughput, or scale number).",
-    role: "Full-stack · Systems",
+      "Placeholder — the cut that shows range: pacing, rhythm and tone across recent work. Replace with the real reel and a concrete signal (client, audience, or reach).",
+    role: "Edit · Color · Sound",
     year: "TODO",
-    stack: ["React", "Go", "WebSocket", "PostgreSQL", "Linux"],
+    stack: ["Premiere Pro", "After Effects", "DaVinci Resolve"],
     liveHref: "",
     repoHref: "",
     image: "/assets/projects/apple-tech-store.jpg",
@@ -107,12 +113,12 @@ export const projects = [
   },
   {
     id: 2,
-    name: "[Placeholder] Container vulnerability-scanning pipeline",
+    name: "[Placeholder] Title sequence",
     outcome:
-      "Placeholder — CI pipeline that scans images for CVEs and blocks vulnerable builds before deploy. Replace with real scope and impact.",
-    role: "Backend · Security",
+      "Placeholder — kinetic typography and compositing built to carry a story beat rather than decorate it. Replace with the real piece and what it was made for.",
+    role: "Motion Design · VFX",
     year: "TODO",
-    stack: ["Python", "Docker", "GitHub Actions", "Trivy"],
+    stack: ["After Effects", "Photoshop"],
     liveHref: "",
     repoHref: "",
     image: "/assets/projects/electronics-store.jpg",
@@ -121,12 +127,12 @@ export const projects = [
   },
   {
     id: 3,
-    name: "[Placeholder] Self-hosted Linux homelab & VPN mesh",
+    name: "[Placeholder] Interactive web experience",
     outcome:
-      "Placeholder — provisioned and hardened a multi-service Linux environment behind a self-hosted VPN. Replace with real architecture and outcomes.",
-    role: "Infrastructure · Networking",
+      "Placeholder — a scroll-driven piece where motion carries the narrative and the engineering stays in service of the feeling. Replace with the real build and its outcome.",
+    role: "Creative Technology",
     year: "TODO",
-    stack: ["Linux", "WireGuard", "Nginx", "Ansible"],
+    stack: ["React", "GSAP", "Three.js"],
     liveHref: "",
     repoHref: "",
     image: "/assets/projects/game-store.jpg",
