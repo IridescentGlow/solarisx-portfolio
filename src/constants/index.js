@@ -1,78 +1,83 @@
 // index.js
+// Capability Map — 4 outcome-oriented areas, final names per
+// UX_ARCHITECTURE_BLUEPRINT §3. Order is meaningful: Visual Storytelling leads
+// (primary discipline); Systems & Technical Exploration sits last as supporting
+// technical depth, not a co-equal identity. `items[].description` is the tools
+// line — supporting detail only, never a rated skill list.
 export const servicesData = [
   {
-    title: "FullStack Development",
+    title: "Visual Storytelling",
     description:
-      "Your business deserves a fast, secure, and future-proof digital foundation. I develop custom web apps with clean architecture, optimized databases, and seamless integrations—ensuring reliability at every layer.",
+      "Attention is earned frame by frame. Seven years of editing taught me that a cut is an argument — what to keep, what to lose, and exactly when a moment should land.",
     items: [
       {
-        title: "Backend Engineering",
-        description: "(REST/GraphQL APIs, Microservices, Auth Systems)",
+        title: "Narrative Editing",
+        description: "Story structure, pacing, rhythm",
       },
       {
-        title: "Frontend Excellence",
-        description: "(React, Vue, TypeScript, Interactive UI/UX)",
+        title: "Color & Finishing",
+        description: "DaVinci Resolve, grade, look development",
       },
       {
-        title: "Database Design",
-        description: "(SQL/NoSQL Optimization, Scalable Structures)",
+        title: "Timing & Sound",
+        description: "Premiere Pro, beat-matched cuts",
       },
     ],
   },
   {
-    title: "DevOps & Cloud Solutions",
+    title: "Motion Design & Visual Effects",
     description:
-      "Deploying software shouldn't be a gamble. I automate infrastructure, enforce security, and leverage cloud platforms (AWS/Azure) to keep your app running smoothly—24/7, at any scale.",
+      "Motion is a language, not decoration. I use it to direct the eye, carry meaning between beats, and make a piece feel deliberate rather than assembled.",
     items: [
       {
-        title: "CI/CD Pipelines",
-        description: "(GitHub Actions, Docker, Kubernetes)",
+        title: "Motion Graphics",
+        description: "After Effects, kinetic typography",
       },
       {
-        title: "Server Management ",
-        description: "(Linux, Nginx, Load Balancing)",
+        title: "Compositing & VFX",
+        description: "After Effects — keying, tracking, cleanup",
       },
       {
-        title: "Performance Tuning",
-        description: "(Caching, Compression, Lighthouse 90+ Scores)",
+        title: "Design & Key Art",
+        description: "Photoshop, thumbnails, title cards",
       },
     ],
   },
   {
-    title: "Security & Optimization",
+    title: "Creative Technology",
     description:
-      "Slow or hacked apps destroy trust. I harden security (XSS/SQLI protection, OAuth) and optimize bottlenecks so your app stays fast, safe, and scalable as you grow.",
+      "The web is another timeline. I build interfaces the way I cut a sequence — pacing, composition and motion first, with the engineering in service of the feeling.",
     items: [
       {
-        title: "Code Audits",
-        description: "(Refactoring, Tech Debt Cleanup)",
+        title: "Interactive Interfaces",
+        description: "React, Vite, Tailwind",
       },
       {
-        title: "Pen Testing",
-        description: "(Vulnerability Assessments)",
+        title: "Motion on the Web",
+        description: "GSAP, ScrollTrigger, scroll-driven sequences",
       },
       {
-        title: "SEO Tech Stack",
-        description: "(SSR, Metadata, Structured Data)",
+        title: "Real-Time 3D",
+        description: "Three.js, React Three Fiber",
       },
     ],
   },
   {
-    title: "Web & Mobile Apps",
+    title: "Systems & Technical Exploration",
     description:
-      "A clunky interface can sink even the best ideas. I craft responsive, pixel perfect web and mobile apps (React Native/Flutter) that users love—bridging design and functionality seamlessly.",
+      "The layer underneath the work. I'm actively deepening Linux, networking and security — not as a separate track, but because understanding the machine makes everything built on top of it better.",
     items: [
       {
-        title: "Cross-Platform Apps",
-        description: "(Single codebase for iOS/Android/Web)",
+        title: "Linux & Self-Hosting",
+        description: "Daily driver, services, tooling",
       },
       {
-        title: "PWAs",
-        description: "(Offline mode, Push Notifications)",
+        title: "Networking",
+        description: "Protocols, routing, VPN",
       },
       {
-        title: "E-Commerce",
-        description: "(Checkout flows, Payment Gateways, Inventory APIs)",
+        title: "Security Fundamentals",
+        description: "Hardening, threat basics",
       },
     ],
   },
