@@ -26,7 +26,7 @@ const Services = () => {
     });
   }, []);
   return (
-    <section id="services" className="min-h-screen bg-[var(--color-surface-1)] rounded-t-4xl">
+    <section id="capabilities" className="min-h-screen bg-[var(--color-surface-1)] rounded-t-4xl">
       <AnimatedHeaderSection
         subTitle={"Behind the scene, Beyond the screen"}
         title={"Capabilities"}

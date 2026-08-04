@@ -141,12 +141,11 @@ export const projects = [
   },
 ];
 
+// TODO(content): add real profile URLs. The template author's personal accounts
+// were removed — do not ship with empty hrefs; drop any platform not actually used.
 export const socials = [
-  { name: "Instagram", href: "https://www.instagram.com/ali.sanatidev/reels/" },
-  {
-    name: "Youtube",
-    href: "https://www.youtube.com/channel/UCZhtUWTtk3bGJiMPN9T4HWA",
-  },
-  { name: "LinkedIn", href: "https://www.linkedin.com/in/ali-sanati/" },
-  { name: "GitHub", href: "https://github.com/Ali-Sanati" },
+  { name: "Instagram", href: "" },
+  { name: "Youtube", href: "" },
+  { name: "LinkedIn", href: "" },
+  { name: "GitHub", href: "" },
 ];

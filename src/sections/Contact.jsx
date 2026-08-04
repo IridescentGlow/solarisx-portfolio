@@ -5,14 +5,14 @@ import { socials } from "../constants";
 import gsap from "gsap";
 
 const Contact = () => {
-  const text = `Got a question, how or project Idea?
-    WE’D love to hear from you and discus further!`;
+  const text = `Have a project, an idea,
+    or something you want to talk through?`;
   const items = [
-    "just imagin, I code",
-    "just imagin, I code",
-    "just imagin, I code",
-    "just imagin, I code",
-    "just imagin, I code",
+    "let's make something memorable",
+    "let's make something memorable",
+    "let's make something memorable",
+    "let's make something memorable",
+    "let's make something memorable",
   ];
   useGSAP(() => {
     gsap.from(".social-link", {
@@ -34,7 +34,7 @@ const Contact = () => {
     >
       <div>
         <AnimatedHeaderSection
-          subTitle={"You Dream It, I Code it"}
+          subTitle={"Let's continue the conversation"}
           title={"Contact"}
           text={text}
           textColor={"text-white"}
@@ -46,14 +46,7 @@ const Contact = () => {
               <h2>E-mail</h2>
               <div className="w-full h-px my-2 bg-white/30" />
               <p className="text-xl tracking-wider lowercase md:text-2xl lg:text-3xl">
-                JohnDoe@gmail.com
-              </p>
-            </div>
-            <div className="social-link">
-              <h2>Phone</h2>
-              <div className="w-full h-px my-2 bg-white/30" />
-              <p className="text-xl lowercase md:text-2xl lg:text-3xl">
-                +33 7 12 12 32 12
+                contactphazotron@gmail.com
               </p>
             </div>
             <div className="social-link">
