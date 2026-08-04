@@ -5,15 +5,13 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
 const About = () => {
-  const text = `Passionate about clean architecture
-    I build scalable, high-performance solutions
-    from prototype to production`;
-  const aboutText = `Obsessed with building fast, intuitive apps—from pixel-perfect React UIs to bulletproof serverless backends. Every line of code is a promise: quality that users feel.
-  When I’m not shipping:
-⚡️ Open-sourcing my latest experiment (or hacking on yours)
-🎥 Teaching devs on Twitch/YouTube—because rising tides lift all ships
-🧗 Rock climbing (problem-solving with real stakes)
-🎸 Strumming chords while CI pipelines pass (multitasking at its finest)`;
+  const text = `Behind the work —
+    where the instincts come from
+    and how the pieces get made`;
+  const aboutText = `I started in video editing. Seven years of learning that a cut is a decision — what to keep, what to lose, and exactly when a moment should land.
+That training is still the whole method. Story first, because a piece has to say something. Visual rhythm, because timing and spacing carry as much meaning as the frame. Emotional impact, because the work people remember made them feel something before they understood why.
+The web became another timeline. I use interfaces, motion and real-time 3D the way I use a sequence — pacing and composition first, the engineering underneath in service of the feeling.
+I work by exploring, building, reviewing, then polishing until a thing feels inevitable rather than assembled.`;
   const imgRef = useRef(null);
   useGSAP(() => {
     gsap.to("#about", {
@@ -41,13 +39,14 @@ const About = () => {
   return (
     <section id="about" className="min-h-screen bg-[var(--color-surface-1)] rounded-b-4xl">
       <AnimatedHeaderSection
-        subTitle={"Cod with purpose, Built to scale"}
+        subTitle={"Behind the work"}
         title={"About"}
         text={text}
         textColor={"text-white"}
         withScrollTrigger={true}
       />
       <div className="flex flex-col items-center justify-between gap-16 px-10 pb-16 text-xl font-light tracking-wide lg:flex-row md:text-2xl lg:text-3xl text-white/60">
+        {/* TODO(content): replace with a real portrait — this is the template's stock photo */}
         <img
           ref={imgRef}
           src="images/man.jpg"

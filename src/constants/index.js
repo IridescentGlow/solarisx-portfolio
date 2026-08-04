@@ -84,15 +84,12 @@ export const servicesData = [
 ];
 
 // Proof of Craft — evidence-first project index.
-// PLACEHOLDER CONTENT (not real shipped work): the entries below mirror the
-// governing identity in UX_ARCHITECTURE_BLUEPRINT §3 — a visual storyteller /
-// creative technologist who uses technology as a creative medium, not an
-// engineer who also edits. They track the first three Capability Map areas in
-// order: Visual Storytelling (featured, per §3's "featured reel = highest
-// visual priority"), Motion Design & Visual Effects, then Creative Technology.
-// Systems & Technical Exploration is supporting depth and deliberately does not
-// headline a project here.
-// Replace with real work (3–6 strongest) before launch. Exactly one
+// Ordering mirrors the governing identity in UX_ARCHITECTURE_BLUEPRINT §3 — a
+// visual storyteller / creative technologist, not an engineer who also edits —
+// so the reel leads (per §3's "featured reel = highest visual priority").
+// Entries 1–2 are PLACEHOLDERS (not real work), marked "[Placeholder]".
+// Entry 3 (MediHelp) is real but incomplete; its TODO fields need filling.
+// Exactly one
 // `featured: true` (the lead row). `stack` is a plain string array.
 // `image`/`bgImage` reuse template assets as visual placeholders — replace with
 // real stills/frames.
@@ -127,14 +124,14 @@ export const projects = [
   },
   {
     id: 3,
-    name: "[Placeholder] Interactive web experience",
+    name: "MediHelp",
     outcome:
-      "Placeholder — a scroll-driven piece where motion carries the narrative and the engineering stays in service of the feeling. Replace with the real build and its outcome.",
-    role: "Creative Technology",
+      "Hackathon project built with a team of full-stack developers, aimed at communities that are medically underserved. TODO: the specific problem it solved and what came of it.",
+    role: "TODO: your role on the team",
     year: "TODO",
-    stack: ["React", "GSAP", "Three.js"],
+    stack: ["TODO: stack"],
     liveHref: "",
-    repoHref: "",
+    repoHref: "", // TODO: GitHub repo
     image: "/assets/projects/game-store.jpg",
     bgImage: "/assets/backgrounds/curtains.jpg",
     featured: false,
