@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { socials } from "../constants";
+import { socials, socialIcons } from "../constants";
+import { Icon } from "@iconify/react/dist/iconify.js";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { Link } from "react-scroll";
@@ -130,16 +131,19 @@ const Navbar = () => {
           </div>
           <div className="font-light">
             <p className="tracking-wider text-white/50">Social Media</p>
-            <div className="flex flex-col flex-wrap md:flex-row gap-x-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               {socials.map((social, index) => (
                 <a
                   key={index}
                   href={social.href}
-                  className="text-sm leading-loose tracking-widest uppercase hover:text-white transition-colors duration-300"
+                  aria-label={social.name}
+                  title={social.name}
+                  className="transition-colors duration-300 hover:text-white"
                 >
-                  {"{ "}
-                  {social.name}
-                  {" }"}
+                  <Icon
+                    icon={socialIcons[social.name] ?? "mdi:link-variant"}
+                    className="size-6 md:size-7"
+                  />
                 </a>
               ))}
             </div>

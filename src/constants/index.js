@@ -142,7 +142,17 @@ export const projects = [
 // were removed — do not ship with empty hrefs; drop any platform not actually used.
 export const socials = [
   { name: "Instagram", href: "" },
-  { name: "Youtube", href: "" },
+  { name: "Beacons", href: "" },
   { name: "LinkedIn", href: "" },
   { name: "GitHub", href: "" },
 ];
+
+// Platform name -> Iconify id. Shared by Contact and Navbar so the mapping lives
+// in one place. Beacons has no brand icon in Iconify (verified), so it uses a
+// generic link glyph — it is a link-in-bio service.
+export const socialIcons = {
+  Instagram: "mdi:instagram",
+  Beacons: "mdi:link-variant",
+  LinkedIn: "mdi:linkedin",
+  GitHub: "mdi:github",
+};

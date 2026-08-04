@@ -1,7 +1,8 @@
 import { useGSAP } from "@gsap/react";
+import { Icon } from "@iconify/react/dist/iconify.js";
 import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
 import Marquee from "../components/Marquee";
-import { socials } from "../constants";
+import { socials, socialIcons } from "../constants";
 import gsap from "gsap";
 
 const Contact = () => {
@@ -57,11 +58,14 @@ const Contact = () => {
                   <a
                     key={index}
                     href={social.href}
-                    className="text-xs leading-loose tracking-wides uppercase md:text-sm hover:text-white/80 transition-colors duration-200"
+                    aria-label={social.name}
+                    title={social.name}
+                    className="transition-colors duration-200 hover:text-white/80"
                   >
-                    {"{ "}
-                    {social.name}
-                    {" }"}
+                    <Icon
+                      icon={socialIcons[social.name] ?? "mdi:link-variant"}
+                      className="size-7 md:size-8"
+                    />
                   </a>
                 ))}
               </div>
