@@ -129,14 +129,31 @@ const Works = () => {
             />
 
             {/* title */}
-            <div className="flex justify-between px-10 text-white transition-all duration-500 md:group-hover:px-12 md:group-hover:text-white">
+            <div className="flex items-start justify-between gap-6 px-10 text-white transition-all duration-500 md:group-hover:px-12 md:group-hover:text-white">
               <h2 className="lg:text-[32px] text-[26px] leading-none">
                 {project.name}
               </h2>
-              <Icon icon="lucide:arrow-up-right" className="md:size-6 size-5" />
+              <div className="flex items-center gap-4 text-xs tracking-wider uppercase shrink-0 text-[var(--color-text-tertiary)]">
+                <span className="hidden sm:inline">{project.role}</span>
+                <span className="hidden sm:inline">{project.year}</span>
+                <Icon
+                  icon="lucide:arrow-up-right"
+                  className="text-white md:size-6 size-5"
+                />
+              </div>
             </div>
-            {/* divider */}
-            <div className="w-full h-0.5 bg-[var(--color-border)]" />
+            {/* outcome */}
+            <p className="max-w-3xl px-10 mt-2 mb-3 text-sm transition-all duration-500 md:text-base text-[var(--color-text-secondary)] md:group-hover:px-12">
+              {project.outcome}
+            </p>
+            {/* divider — accent under the featured (lead) row */}
+            <div
+              className={`w-full h-0.5 ${
+                project.featured
+                  ? "bg-[var(--color-accent)]"
+                  : "bg-[var(--color-border)]"
+              }`}
+            />
             {/* stack */}
             <div className="flex px-10 text-xs leading-loose uppercase transtion-all duration-500 md:text-sm gap-x-5 md:group-hover:px-12">
               {project.stack.map((tech) => (
