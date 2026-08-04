@@ -138,13 +138,11 @@ export const projects = [
   },
 ];
 
-// TODO(content): add real profile URLs. The template author's personal accounts
-// were removed — do not ship with empty hrefs; drop any platform not actually used.
 export const socials = [
-  { name: "Instagram", href: "" },
-  { name: "Beacons", href: "" },
-  { name: "LinkedIn", href: "" },
-  { name: "GitHub", href: "" },
+  { name: "Instagram", href: "https://www.instagram.com/phazotron_" },
+  { name: "Beacons", href: "https://beacons.ai/phazotron" },
+  { name: "LinkedIn", href: "https://www.linkedin.com/in/edible-dank" },
+  { name: "GitHub", href: "https://github.com/IridescentGlow" },
 ];
 
 // Platform name -> Iconify id. Shared by Contact and Navbar so the mapping lives
