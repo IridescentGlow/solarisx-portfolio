@@ -14,7 +14,7 @@ results driven webs/apps`;
         subTitle={"404 No Bugs Found"}
         title={"Ali Sanati"}
         text={text}
-        textColor={"text-black"}
+        textColor={"text-white"}
       />
       <figure
         className="absolute inset-0 -z-50"

@@ -23,7 +23,7 @@ const App = () => {
   return (
     <ReactLenis root className="relative w-screen min-h-screen overflow-x-auto">
       {!isReady && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black text-white transition-opacity duration-700 font-light">
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-[var(--color-bg-base)] text-white transition-opacity duration-700 font-light">
           <p className="mb-4 text-xl tracking-widest animate-pulse">
             Loading {Math.floor(progress)}%
           </p>
@@ -42,10 +42,10 @@ const App = () => {
       >
         <Navbar />
         <Hero />
+        <Works />
+        <About />
         <ServiceSummary />
         <Services />
-        <About />
-        <Works />
         <ContactSummary />
         <Contact />
       </div>
