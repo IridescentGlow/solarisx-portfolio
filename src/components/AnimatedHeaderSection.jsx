@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { AnimatedTextLines } from "../components/AnimatedTextLines";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { EASE, DURATION } from "../lib/motion";
 const AnimatedHeaderSection = ({
   subTitle,
   title,
@@ -22,18 +23,21 @@ const AnimatedHeaderSection = ({
           }
         : undefined,
     });
+    // The frame arriving is the handoff between frames — connective character,
+    // quicker and quieter than an entrance (TRANSITION_PHILOSOPHY §2).
     tl.from(contextRef.current, {
       y: "50vh",
-      duration: 1,
-      ease: "circ.out",
+      duration: DURATION.transition,
+      ease: EASE.connective,
     });
+    // The header content appearing is an entrance, not a handoff — cinematic.
     tl.from(
       headerRef.current,
       {
         opacity: 0,
         y: "200",
-        duration: 1,
-        ease: "circ.out",
+        duration: DURATION.reveal,
+        ease: EASE.cinematic,
       },
       "<+0.2"
     );

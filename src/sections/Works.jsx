@@ -4,6 +4,7 @@ import { projects } from "../constants";
 import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { EASE, DURATION } from "../lib/motion";
 
 const Works = () => {
   const overlayRefs = useRef([]);
@@ -32,9 +33,9 @@ const Works = () => {
       y: 100,
       opacity: 0,
       delay: 0.5,
-      duration: 1,
+      duration: DURATION.reveal,
       stagger: 0.3,
-      ease: "back.out",
+      ease: EASE.cinematic,
       scrollTrigger: {
         trigger: "#project",
       },

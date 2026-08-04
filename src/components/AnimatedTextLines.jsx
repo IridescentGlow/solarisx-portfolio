@@ -2,6 +2,7 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/all";
 import { useRef } from "react";
+import { EASE, DURATION } from "../lib/motion";
 gsap.registerPlugin(ScrollTrigger);
 export const AnimatedTextLines = ({ text, className }) => {
   const containerRef = useRef(null);
@@ -12,9 +13,9 @@ export const AnimatedTextLines = ({ text, className }) => {
       gsap.from(lineRefs.current, {
         y: 100,
         opacity: 0,
-        duration: 1,
+        duration: DURATION.reveal,
         stagger: 0.3,
-        ease: "back.out",
+        ease: EASE.cinematic,
         scrollTrigger: {
           trigger: containerRef.current,
         },
