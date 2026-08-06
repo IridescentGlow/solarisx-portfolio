@@ -93,48 +93,70 @@ export const servicesData = [
 // `featured: true` (the lead row). `stack` is a plain string array.
 // `image`/`bgImage` reuse template assets as visual placeholders — replace with
 // real stills/frames.
+//
+// `slug` and `caseStudy` (PROJECT_PAGE_SYSTEM.md §3) — additive, depth-layer
+// fields. `slug` is the /projects/:slug permalink segment; treat it as stable
+// once shared. `caseStudy: null` means index-only: Works.jsx keeps linking
+// out via liveHref/repoHref rather than to an internal project page (§3's
+// rule) — this is what makes the routing decision data-driven rather than a
+// hardcoded id/slug check in the component.
+// MediHelp (id 3) is the first project with its internal page live, so its
+// caseStudy is `{}` — truthy, so its row now routes to /projects/medihelp —
+// but still empty: no section content has been written yet (ProjectPage.jsx
+// shows "not yet published" for any caseStudy without real section data).
 export const projects = [
   {
     id: 1,
-    name: "[Placeholder] Signature reel",
+    slug: "signature-reel",
+    name: "Signature Reel - Portfolio Highlights Showcase",
     outcome:
       "Placeholder — the cut that shows range: pacing, rhythm and tone across recent work. Replace with the real reel and a concrete signal (client, audience, or reach).",
     role: "Edit · Color · Sound",
-    year: "TODO",
+    year: "2025",
     stack: ["Premiere Pro", "After Effects", "DaVinci Resolve"],
-    liveHref: "",
+    liveHref: "https://ytjobs.co/talent/profile/273483",
     repoHref: "",
-    image: "/assets/projects/apple-tech-store.jpg",
+    image: "/assets/projects/reel.mp4",
     bgImage: "/assets/backgrounds/map.jpg",
     featured: true,
+    caseStudy: null,
   },
   {
     id: 2,
-    name: "[Placeholder] Title sequence",
+    slug: "editor-portfolio",
+    name: "Editor Portfolio - Selected Works",
     outcome:
-      "Placeholder — kinetic typography and compositing built to carry a story beat rather than decorate it. Replace with the real piece and what it was made for.",
+      "kinetic typography and compositing built to carry a story beat rather than decorate it. Replace with the real piece and what it was made for.",
     role: "Motion Design · VFX",
-    year: "TODO",
+    year: "Present",
     stack: ["After Effects", "Photoshop"],
-    liveHref: "",
+    liveHref: "https://ytjobs.co/talent/profile/273483",
     repoHref: "",
-    image: "/assets/projects/electronics-store.jpg",
+    image: "/assets/projects/game-store.jpg",
     bgImage: "/assets/backgrounds/poster.jpg",
     featured: false,
+    caseStudy: null,
   },
   {
     id: 3,
-    name: "MediHelp",
+    slug: "medihelp",
+    name: "MediHelp - Award winning Solution",
     outcome:
       "Hackathon project built with a team of full-stack developers, aimed at communities that are medically underserved. TODO: the specific problem it solved and what came of it.",
-    role: "TODO: your role on the team",
-    year: "TODO",
-    stack: ["TODO: stack"],
-    liveHref: "",
-    repoHref: "", // TODO: GitHub repo
-    image: "/assets/projects/game-store.jpg",
+    role: "Front-End Developer and Motion Designer",
+    year: "2024",
+    stack: [
+      "Backend: Django 5.2, DRF 3.16, PostgreSQL, JWT",
+      "Frontend: ReactJS, TailwindCSS, Sentry, Web Vitals",
+      "AI: Google Gemini API",
+      "Docs: OpenAPI 3 via drf-spectacular"
+    ],
+    liveHref: "https://medihelp-frontend.vercel.app/",
+    repoHref: "https://github.com/ellay21/Medihelp-Frontend", // TODO: GitHub repo
+    image: "/assets/projects/medi-help.mp4",
     bgImage: "/assets/backgrounds/curtains.jpg",
     featured: false,
+    caseStudy: {},
   },
 ];
 

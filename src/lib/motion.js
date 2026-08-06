@@ -33,6 +33,17 @@ export const DURATION = {
   revelation: 4.0,
 };
 
+// Pre-trigger offset for non-scrubbed reveals. Firing at the default "top
+// bottom" starts the multi-second cinematic reveal only once the element is
+// already at the viewport edge, so by the time it's actually visible the
+// animation is still catching up — scroll, empty space, then a late pop-in.
+// Starting at 120% instead begins the reveal while the element is still 20%
+// of a viewport-height below the fold, so it has a head start and is
+// settling as the element arrives on screen. Does not apply to scrub-linked
+// animations (ServiceSummary, ContactSummary, About's scale effect), whose
+// progress is tied to scroll position rather than a fixed-duration timer.
+export const SCROLL_REVEAL_START = "top 120%";
+
 // TRANSITION_PHILOSOPHY_CANONICAL.md §5 — under prefers-reduced-motion, motion
 // collapses to instant state changes. Setting the global GSAP default once, here,
 // means every timeline inherits it and no component needs its own branch.

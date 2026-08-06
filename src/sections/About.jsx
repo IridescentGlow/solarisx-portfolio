@@ -3,6 +3,7 @@ import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
 import { AnimatedTextLines } from "../components/AnimatedTextLines";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { SCROLL_REVEAL_START } from "../lib/motion";
 
 const About = () => {
   const text = `Behind the work —
@@ -33,7 +34,7 @@ I work by exploring, building, reviewing, then polishing until a thing feels ine
       clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
       duration: 2,
       ease: "power4.out",
-      scrollTrigger: { trigger: imgRef.current },
+      scrollTrigger: { trigger: imgRef.current, start: SCROLL_REVEAL_START },
     });
   });
   return (
@@ -49,7 +50,7 @@ I work by exploring, building, reviewing, then polishing until a thing feels ine
         {/* TODO(content): replace with a real portrait — this is the template's stock photo */}
         <img
           ref={imgRef}
-          src="images/man.jpg"
+          src="images/photo.jpg"
           alt="man"
           className="w-md rounded-3xl"
         />

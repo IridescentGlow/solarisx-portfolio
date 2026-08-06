@@ -4,7 +4,7 @@ import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
 import Marquee from "../components/Marquee";
 import { socials, socialIcons } from "../constants";
 import gsap from "gsap";
-import { EASE, DURATION } from "../lib/motion";
+import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 
 const Contact = () => {
   const text = `Have a project, an idea,
@@ -26,6 +26,7 @@ const Contact = () => {
       ease: EASE.cinematic,
       scrollTrigger: {
         trigger: ".social-link",
+        start: SCROLL_REVEAL_START,
       },
     });
   }, []);

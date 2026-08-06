@@ -4,6 +4,7 @@ import { servicesData } from "../constants";
 import { useMediaQuery } from "react-responsive";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { SCROLL_REVEAL_START } from "../lib/motion";
 const Services = () => {
   const text = `Story first, technology second.
     Four disciplines that feed each other —
@@ -18,7 +19,7 @@ const Services = () => {
         y: 200,
         scrollTrigger: {
           trigger: el,
-          start: "top 80%",
+          start: SCROLL_REVEAL_START,
         },
         duration: 1,
         ease: "circ.out",

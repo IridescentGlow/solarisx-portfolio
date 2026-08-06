@@ -3,7 +3,7 @@ import { useRef } from "react";
 import { AnimatedTextLines } from "../components/AnimatedTextLines";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { EASE, DURATION } from "../lib/motion";
+import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 const AnimatedHeaderSection = ({
   subTitle,
   title,
@@ -20,6 +20,7 @@ const AnimatedHeaderSection = ({
       scrollTrigger: withScrollTrigger
         ? {
             trigger: contextRef.current,
+            start: SCROLL_REVEAL_START,
           }
         : undefined,
     });

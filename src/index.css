@@ -105,6 +105,20 @@
     }
   }
 
+  /* Soft, slow glow pulse for the MediHelp award treatment (Works.jsx) — a
+     restrained hover-only accent, not a persistent signal, so it stays
+     subordinate to the featured row's always-visible gold divider. */
+  --animate-trophy-glow: trophy-glow 3s ease-in-out infinite;
+  @keyframes trophy-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 16px var(--color-accent));
+    }
+  }
+
   /* ------------------------------------------------------------------ */
   /* Solarisx canonical design tokens — ported from                     */
   /* docs/design/DESIGN_SYSTEM_TOKENS.md (v1.0). Additive: the legacy   */
@@ -231,5 +245,26 @@ body {
 
 @utility contact-text-responsive {
   @apply text-[42px] sm:text-[52px] md:text-[62px] lg:text-[100px];
+}
+
+/* Click feedback (Works project rows) — a small circle that GSAP scales up
+   and fades from the click point. Not a Material ripple: no flat solid
+   fill/hard edge, just a bright flash core (near-white, so it reads clearly
+   against the dark theme) falling off through the site's own accent color
+   — color-mix() derives the glow ring's alpha from --color-accent rather
+   than hardcoding a new value, so it stays tied to the token. */
+@utility click-burst {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.8) 0%,
+    color-mix(in srgb, var(--color-accent) 40%, transparent) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 
