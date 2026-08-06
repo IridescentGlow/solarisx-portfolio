@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Solarisx mark. Tokens only: --color-bg-base ground, single --color-accent
-       ring. Abstract on purpose — reads as an aperture and a solar form, and
-       stays legible at 16px. -->
-  <rect width="32" height="32" rx="7" fill="#0B0A09" />
-  <circle cx="16" cy="16" r="8.5" fill="none" stroke="#CFA355" stroke-width="3" />
-</svg>
