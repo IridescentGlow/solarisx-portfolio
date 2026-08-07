@@ -92,8 +92,158 @@ placeholders.
 
 ## Changelog
 
-## Milestone — Chapter Stack Transition + Award Light Sweep
+## Milestone — Premium Polish: Typography Rhythm, Gallery Depth
 *(this milestone)*
+
+Refinement only — no redesign, no new visual language. Started by
+measuring both pages side by side rather than working from memory.
+
+**What the comparison actually showed**
+
+- Home gives every section `min-height: 900px` and **zero** margins; flow
+  comes from full-viewport frames, not from gaps. Its raised panels round
+  only one edge (About `0/0/32/32`, Capabilities `32/32/0/0`) so they
+  bracket the transparent interlude between them.
+- The gaps themselves turned out to be comparable (Home 80/168/64px vs
+  MediHelp 192px), so the earlier assumption that margins caused the
+  abrupt rhythm was wrong — worth recording, because it would have been
+  easy to "fix" the wrong thing.
+- The real difference was typographic: **Home's body copy renders as
+  separate paragraph blocks**, and `AnimatedTextLines` staggers each one
+  in. MediHelp's `caseStudy` strings had no line breaks at all, so they
+  rendered as one unbroken block and lost the stagger entirely.
+
+**Typography**
+
+- Inserted 9 paragraph breaks across the case-study copy. Formatting
+  only — not one word changed. `AnimatedTextLines` splits on `\n`, so
+  this restores both the visual rhythm and the staggered reveal Home
+  gets. Challenge/Approach/Craft/Result now render 2/5/5/3 blocks.
+- Added `space-y-5` (body) and `space-y-4` (large statements) to the
+  containers `AnimatedTextLines` already receives — no change to the
+  shared component. Needed because Home's separation comes free at ~30px
+  body copy; at `--text-body-lg`'s 18px the line breaks alone still read
+  as one dense block.
+- **Deliberately did not** raise body copy toward Home's ~30px, despite
+  that being the largest remaining visual difference between the pages.
+  `PROJECT_PAGE_SYSTEM.md` §8 explicitly designates `--text-body-lg` for
+  case-study long-form reading, and per `CLAUDE.md` the documentation
+  wins. Flagging the tension rather than silently overriding a canonical
+  decision — worth a deliberate call if the two should be reconciled.
+
+**Gallery depth**
+
+- Extracted the card and image treatments into shared constants so the
+  featured frame and strip items can't drift apart.
+- Card and image now move on deliberately different clocks: the card
+  lifts and its shadow deepens over 700ms while the image drifts to 1.06
+  over 1200ms. That mismatch is what reads as depth — the image appears
+  to sit behind the frame and lag it, rather than the tile scaling as one
+  flat object. Scale reduced from 1.10 to 1.06; at this frame size the
+  larger figure read as a zoom rather than a settle.
+- `focus-within` now mirrors the hover treatment, so keyboard traversal
+  gets the same affordance as a pointer.
+- Aligned hover shadow behaviour across the award cards and the Approach
+  callout, which previously lifted without their shadows responding.
+
+**Regression caught and fixed mid-pass**
+
+- The paragraph spacing grew Approach past the stack's narrow-band height
+  gate — it needed 1091px against a 1030px threshold, which would have
+  clipped its lower content while pinned. Caught by the clipping check
+  rather than by eye. Re-measured every width and raised the narrow gate
+  to 1120px (worst cases now: 881px from 1024px up, 1091px in the
+  768–1023px band). A side effect of the taller chapter is that overlap
+  coverage moved from 78% to **80%**, landing inside the 80–85% range
+  originally asked for.
+
+- Re-verified nothing regressed: wheel still exact (100px notch → 100px,
+  line-mode → 48px, edge hands off), overlap still pins 0/160 with the
+  title inside the band, shine still replays on both re-entry paths with
+  its end boundary still reachable, all nine stack gate branches clean,
+  zero horizontal overflow at 390/700/820/1440px, no console errors.
+- `npm run build` and `npm run lint` both pass clean.
+- Files touched: `src/pages/ProjectPage.jsx`, `src/constants/index.js`
+  (paragraph breaks only). No new dependencies, no new tokens.
+
+### Milestone — Interaction Polish: Wheel, Shine Replay, Overlap Stop
+
+Polish only — no redesign. Three reported issues, all traced to concrete
+causes rather than tuned by feel.
+
+**Gallery wheel scrolling — two compounding bugs, both measured**
+
+- `scroll-snap-type: x mandatory` was the main cause. Mandatory snapping
+  forces every rest position onto an item centre, so a full 100px wheel
+  notch resolved to **24px** of travel and a 3px line-mode notch to
+  **zero** — the strip was snapping straight back to where it started.
+  Tried `snap-proximity` first; it still snapped, because the items sit
+  ~504px apart so there is always a snap point in range. Removed scroll
+  snap entirely; the momentum glide now supplies the settled feel.
+- `deltaY` is not always pixels. Firefox reports `DOM_DELTA_LINE` (~3 per
+  notch) and some setups `DOM_DELTA_PAGE`; the old handler added that
+  raw number to `scrollLeft`, so a real mouse wheel moved the strip 3px.
+  Now normalised to pixels per `deltaMode`.
+- Replaced the discrete `scrollLeft +=` with a `gsap.quickTo` glide —
+  the same pattern `Works.jsx` already uses to trail its cursor preview
+  — so a notch decelerates instead of stepping.
+- Fixed two further defects found while verifying: `gsap.isTweening(el)`
+  stays true after a `quickTo` finishes, so the resync that keeps swipe
+  and wheel in agreement never ran (now checks the tween's own
+  `isActive()`); and the edge check compared for exact equality, which a
+  fractional `scrollLeft` defeated, leaving the gallery swallowing wheel
+  events at the end of the strip (now compared with a 1px tolerance).
+- Verified with dispatched wheel events, not by eye: a 100px notch moves
+  exactly **100px**, a Firefox line notch exactly **48px**, three notches
+  accumulate to exactly **300px**, and the glide samples
+  `[403, 461, 484, 496, 500, 500, 500]` — smooth deceleration onto the
+  target with no jitter. All six edge-handoff cases pass (both edges hand
+  back to page scroll, mid-strip captures in both directions).
+
+**Award shine — replay was structurally impossible**
+
+- The trigger's `end: "bottom top"` resolves to **6976px**, but the
+  document's maximum scroll is **6806px**. That boundary can never be
+  reached, so `onLeave` never fired — and without it there is no
+  `onEnterBack` to replay from. The shine could only ever play once, no
+  matter what `toggleActions` said. Changed to `end: "bottom center"`
+  (6526px, comfortably reachable).
+- `toggleActions: "restart none restart none"` now replays on both
+  re-entry paths, each confirmed: scrolling up above the section and back
+  down, and scrolling past it and back up.
+- Trigger moved earlier from `"55% bottom"` to `"45% bottom"`, i.e. fires
+  when 45% of the section is visible, inside the requested 40–50% window.
+
+**Chapter overlap — previous title now stays visible**
+
+- The overlap stopped 40px short of the covering chapter, which hid the
+  pinned chapter's title completely. `Services.jsx` gets this layering for
+  free because its cards put their title ~24px from the top; a chapter
+  opener put its title **150px** down, largely because the `text=""` slot
+  still reserved ~128px for a line that renders nothing.
+- Added an opt-in `compact` prop to `AnimatedHeaderSection` — same
+  additive contract as the existing `textClassName`, default off, so
+  every Home caller renders identically (verified: all five Home headers
+  still measure `pt 64px / gap 64px`). It tightens only framing
+  whitespace, never the type scale. Applied to the four chapter openers.
+- With the title now at 70–150px, the sticky step went from 2.5em to
+  **10em (160px)**. Measured result: Challenge pins at 0, Approach at
+  160, the visible band is exactly 160px, the pinned title sits fully
+  inside it, and Challenge ends up **78% covered** — close to the
+  requested 80–85%, and erring toward showing the title rather than
+  clipping it, which was the actual goal.
+- Side benefit: removing the dead whitespace cut the mobile page from
+  8535px to 8055px.
+
+- Re-verified the whole stack after the height changes: all nine gate
+  branches still correct, zero clipping, zero horizontal overflow at
+  390/700/820/1440px, no console errors.
+- `npm run build` and `npm run lint` both pass clean.
+- Files touched: `src/pages/ProjectPage.jsx`,
+  `src/components/AnimatedHeaderSection.jsx` (additive `compact` prop).
+  No new dependencies.
+
+### Milestone — Chapter Stack Transition + Award Light Sweep
 
 Interaction refinement only — no redesign, no content changes.
 

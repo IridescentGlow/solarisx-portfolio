@@ -27,6 +27,28 @@ import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 // answer to "sections should feel like one journey" than a bespoke
 // scrub effect layered on top ever could be (kept anyway, additively).
 
+// Gallery card + image treatment, shared by the featured frame and every
+// strip item so the two can never drift apart.
+//
+// The card and the image move on deliberately different clocks: the card
+// lifts and its shadow deepens over 700ms, the image drifts to 1.06 over
+// 1200ms. That mismatch is what reads as depth — the image appears to sit
+// behind the frame and lag it slightly, rather than the whole tile scaling
+// as one flat object. Scale is 1.06, not 1.10: at this frame size a larger
+// figure reads as a zoom effect instead of a settle.
+//
+// Both use the site's cinematic curve, and the shadow transitions rather
+// than appearing instantly. focus-within mirrors the hover treatment so
+// keyboard traversal gets the same affordance as a pointer.
+const GALLERY_CARD =
+  "group overflow-hidden rounded-lg border border-[var(--color-border)] shadow-lg " +
+  "transition-[border-color,box-shadow,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] " +
+  "hover:-translate-y-1.5 hover:border-[var(--color-accent)] hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)] " +
+  "focus-within:-translate-y-1.5 focus-within:border-[var(--color-accent)]";
+const GALLERY_IMG =
+  "object-cover w-full h-full transition-transform duration-[1200ms] " +
+  "ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06] group-focus-within:scale-[1.06]";
+
 const ProjectPage = () => {
   const { slug } = useParams();
   const project = projects.find((p) => p.slug === slug);
@@ -57,11 +79,17 @@ const ProjectPage = () => {
   // requires depends on the width it is at — and mobile is excluded
   // outright rather than shipping an interaction that hides content.
   // Below the gate the chapters simply render in normal document flow.
+  // Thresholds are re-measured whenever chapter heights change, because a
+  // stale gate silently clips content. Current worst cases, including the
+  // 160px peek the pinned Approach carries: 881px from 1024px wide up, and
+  // 1091px in the 768–1023px band (text reflows taller there). The narrow
+  // gate moved 1030 -> 1120 when paragraph spacing was added — that change
+  // grew Approach past the old threshold and would have clipped it.
   const canStackWide = useMediaQuery({ minWidth: 1024, minHeight: 900 });
   const canStackNarrow = useMediaQuery({
     minWidth: 768,
     maxWidth: 1023,
-    minHeight: 1030,
+    minHeight: 1120,
   });
   const canStack = canStackWide || canStackNarrow;
 
@@ -72,8 +100,15 @@ const ProjectPage = () => {
   // replaces it" — and because it is the last child of the stack wrapper,
   // the pins release as it ends. Nothing after Craft is affected.
   const stackClass = canStack ? "sticky" : "";
+  // 10em (160px) per step, not a token sliver. Services.jsx's 5em step
+  // fully reveals its card titles because its cards put their title ~24px
+  // from the top; a chapter opener puts its title ~78px down even in
+  // compact mode, and the title's own line box is 80px, so the peek has to
+  // clear ~158px for the pinned chapter's title to still read above the
+  // covering one. That layering — the previous chapter's giant title still
+  // showing — is the whole point of the effect on the home page.
   const stackStyle = (index) =>
-    canStack ? { top: index === 0 ? 0 : `${index * 2.5}em`, zIndex: index + 1 } : undefined;
+    canStack ? { top: index === 0 ? 0 : `${index * 10}em`, zIndex: index + 1 } : undefined;
   // Flush while stacking (the seam IS the transition); normal rhythm when
   // the stack is off.
   const chapterGap = canStack ? "" : "mt-32 md:mt-48";
@@ -184,13 +219,21 @@ const ProjectPage = () => {
     });
   }, [project]);
 
-  // Award ambient light sweep. Fires once, when 55% of the Award chapter
-  // has scrolled into view — ScrollTrigger's `"55% bottom"` means "the
-  // point 55% down the trigger reaches the viewport bottom", which is
-  // literally "55% of this section is visible", so the requested 50–60%
-  // window is expressed exactly rather than approximated with a viewport
-  // percentage. `once: true` guarantees exactly two sweeps total (two
-  // elements, one pass each) instead of re-firing on every re-entry.
+  // Award ambient light sweep. Fires when 45% of the Award chapter has
+  // scrolled into view — ScrollTrigger's `"45% bottom"` means "the point
+  // 45% down the trigger reaches the viewport bottom", which is literally
+  // "45% of this section is visible", so the requested 40–50% window is
+  // expressed exactly rather than approximated with a viewport percentage.
+  //
+  // Replays rather than firing once: `toggleActions` is ordered
+  // [onEnter, onLeave, onEnterBack, onLeaveBack], so "restart none restart
+  // none" re-runs the pair whenever the section is entered from above or
+  // re-entered from below, and does nothing on the way out. Paired with an
+  // explicit `end` so there is a boundary to leave and re-enter through —
+  // without one there is no onEnterBack to replay from. Scrolling within
+  // the section does not re-fire it; only actually leaving and returning
+  // does, which is what keeps it feeling alive rather than twitchy.
+  // fromTo (not set + to) so each replay starts from a known offset.
   //
   // EASE.connective is the one true ease-in-out in the canonical set
   // (0.65, 0, 0.35, 1) — the right curve for "no abrupt starts or stops"
@@ -211,18 +254,28 @@ const ProjectPage = () => {
     ) {
       return;
     }
-    gsap.set(sweeps, { xPercent: -160 });
-    gsap.to(sweeps, {
-      xPercent: 340,
-      duration: DURATION.reveal,
-      stagger: 0.9,
-      ease: EASE.connective,
-      scrollTrigger: {
-        trigger: awardChapterRef.current,
-        start: "55% bottom",
-        once: true,
-      },
-    });
+    gsap.fromTo(
+      sweeps,
+      { xPercent: -160 },
+      {
+        xPercent: 340,
+        duration: DURATION.reveal,
+        stagger: 0.9,
+        ease: EASE.connective,
+        scrollTrigger: {
+          trigger: awardChapterRef.current,
+          start: "45% bottom",
+          // "bottom center", not "bottom top". The Award chapter sits near
+          // the end of the page: "bottom top" resolves to 6976px while the
+          // document's maximum scroll is 6806px, so that boundary can never
+          // be reached — onLeave would never fire, and without it there is
+          // no onEnterBack to replay from. Measured, not assumed; the
+          // replay was silently dead until this was traced.
+          end: "bottom center",
+          toggleActions: "restart none restart none",
+        },
+      }
+    );
   }, [project]);
 
   // Screenshot showcase — horizontal scroll fix. A plain vertical mouse
@@ -241,18 +294,69 @@ const ProjectPage = () => {
   useEffect(() => {
     const el = galleryStripRef.current;
     if (!el) return;
-    const onWheel = (e) => {
-      const isLikelyMouseWheel = Math.abs(e.deltaY) > Math.abs(e.deltaX);
-      if (!isLikelyMouseWheel) return; // real trackpad horizontal swipe — already native
-      const atStart = el.scrollLeft <= 0;
-      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
-      const scrollingForward = e.deltaY > 0;
-      if ((atStart && !scrollingForward) || (atEnd && scrollingForward)) return;
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
+
+    // Momentum, via the same gsap.quickTo pattern Works.jsx already uses to
+    // trail its cursor preview — an interpolated glide rather than a hard
+    // per-event jump, so a wheel notch decelerates instead of stepping.
+    const glide = gsap.quickTo(el, "scrollLeft", {
+      duration: 0.5,
+      ease: "power3.out",
+    });
+    let target = el.scrollLeft;
+
+    // A swipe, drag, or snap settle moves the strip without going through
+    // this handler, which would leave `target` stale and make the next
+    // wheel notch jump backwards. Resync on any direct manipulation.
+    const resync = () => {
+      gsap.killTweensOf(el);
+      target = el.scrollLeft;
     };
+
+    const onWheel = (e) => {
+      // A genuine trackpad horizontal gesture already scrolls this
+      // natively and with better feel than anything re-implemented here.
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+      // deltaY is not always pixels. Firefox reports DOM_DELTA_LINE (~3
+      // per notch) and some configurations DOM_DELTA_PAGE; treating those
+      // as pixels is why a real mouse wheel moved the strip by 3px —
+      // indistinguishable from not moving at all. Normalise to pixels.
+      let delta = e.deltaY;
+      if (e.deltaMode === 1) delta *= 16;
+      else if (e.deltaMode === 2) delta *= el.clientWidth;
+
+      // Resync from the real position whenever the glide is not mid-flight,
+      // so a swipe or any external scroll doesn't leave `target` stale and
+      // make the next notch jump. Checking the quickTo's own tween rather
+      // than gsap.isTweening(el): quickTo keeps a persistent tween on the
+      // element, so isTweening stays true after it has finished and the
+      // resync would never run.
+      if (!glide.tween || !glide.tween.isActive()) target = el.scrollLeft;
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      target = Math.max(0, Math.min(max, target));
+      const next = Math.max(0, Math.min(max, target + delta));
+
+      // At either edge, leave the event alone so the page scrolls on
+      // normally rather than trapping the visitor inside the gallery.
+      // Compared with a tolerance, not for equality: scrollLeft can settle
+      // on a fractional pixel, which left `next` a hair off `max` and kept
+      // the gallery swallowing wheel events at the end of the strip.
+      if (Math.abs(next - target) < 1) return;
+
+      e.preventDefault();
+      target = next;
+      glide(target);
+    };
+
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener("pointerdown", resync, { passive: true });
+    el.addEventListener("touchstart", resync, { passive: true });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("pointerdown", resync);
+      el.removeEventListener("touchstart", resync);
+      gsap.killTweensOf(el);
+    };
   }, [project]);
 
   // caseStudy is `{}` (truthy, no keys) once a project's row starts routing
@@ -347,7 +451,7 @@ const ProjectPage = () => {
           just without a multi-line stagger since there's only one line. */}
       <AnimatedTextLines
         text={project.outcome}
-        className="max-w-[65ch] px-10 mt-10 text-body-lg text-[var(--color-text-secondary)]"
+        className="max-w-[65ch] px-10 mt-10 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
       />
 
       {/* Media — required section, the visual centrepiece (§1, §6). Framed
@@ -413,12 +517,13 @@ const ProjectPage = () => {
               text=""
               textColor="text-white"
               withScrollTrigger={true}
+              compact
             />
             <div className="px-10 mt-10 md:mt-16">
               <div className="flex justify-end">
                 <AnimatedTextLines
                   text={cs.challenge.text}
-                  className="max-w-2xl font-light leading-snug tracking-wide text-right text-white text-2xl md:text-3xl text-pretty"
+                  className="max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
                 />
               </div>
             </div>
@@ -449,11 +554,12 @@ const ProjectPage = () => {
               text=""
               textColor="text-white"
               withScrollTrigger={true}
+              compact
             />
           <div className="grid grid-cols-1 gap-10 px-10 mt-10 md:mt-16 lg:grid-cols-2 lg:gap-16">
             <AnimatedTextLines
               text={cs.approach.text}
-              className="text-body-lg text-[var(--color-text-secondary)]"
+              className="space-y-5 text-body-lg text-[var(--color-text-secondary)]"
             />
             {/* An actual card, not a paragraph with a border: raised
                 surface, icon badge, hover lift — the same hover language
@@ -462,7 +568,7 @@ const ProjectPage = () => {
                 interactive object even though nothing on it links
                 anywhere. */}
             {cs.approach.challenges && (
-              <div className="h-fit p-8 transition-all duration-700 border rounded-lg shadow-lg bg-[var(--color-surface-2)] border-[var(--color-border)] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:-translate-y-1">
+              <div className="h-fit p-8 transition-all duration-700 border rounded-lg shadow-lg bg-[var(--color-surface-2)] border-[var(--color-border)] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:-translate-y-1 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
                 <div className="flex items-center justify-center rounded-full size-12 bg-[var(--color-accent-subtle)]">
                   <Icon
                     icon="mdi:alert-circle-outline"
@@ -477,7 +583,7 @@ const ProjectPage = () => {
                 </h3>
                 <AnimatedTextLines
                   text={cs.approach.challenges}
-                  className="max-w-[60ch] mt-4 text-body-lg text-[var(--color-text-secondary)]"
+                  className="max-w-[60ch] mt-4 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
                 />
               </div>
             )}
@@ -511,12 +617,13 @@ const ProjectPage = () => {
               text=""
               textColor="text-white"
               withScrollTrigger={true}
+              compact
             />
             <div className="grid grid-cols-1 gap-10 px-10 mt-10 lg:grid-cols-2 lg:gap-16">
               {cs.craft.development && (
                 <AnimatedTextLines
                   text={cs.craft.development}
-                  className="text-body-lg text-[var(--color-text-secondary)]"
+                  className="space-y-5 text-body-lg text-[var(--color-text-secondary)]"
                 />
               )}
               {cs.craft.myRole && (
@@ -529,7 +636,7 @@ const ProjectPage = () => {
                   </h3>
                   <AnimatedTextLines
                     text={cs.craft.myRole}
-                    className="mt-4 text-body-lg text-[var(--color-text-secondary)]"
+                    className="mt-4 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
                   />
                 </div>
               )}
@@ -576,7 +683,7 @@ const ProjectPage = () => {
                 {/* Featured frame — item 0 ("Hero"), full chapter width. */}
                 <figure
                   ref={(el) => (galleryRefs.current[0] = el)}
-                  className="relative mx-10 overflow-hidden border rounded-lg shadow-lg group border-[var(--color-border)] transition-[border-color,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:shadow-[0_24px_64px_rgba(0,0,0,0.7)]"
+                  className={`relative mx-10 ${GALLERY_CARD}`}
                   style={{ width: "calc(100% - 5rem)" }}
                 >
                   <div className="overflow-hidden aspect-video">
@@ -584,7 +691,7 @@ const ProjectPage = () => {
                       src={cs.craft.gallery[0].src}
                       alt={cs.craft.gallery[0].alt}
                       loading="lazy"
-                      className="object-cover w-full h-full transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                      className={GALLERY_IMG}
                     />
                   </div>
                   <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
@@ -603,7 +710,16 @@ const ProjectPage = () => {
                     the peeking edge are the actual affordance. */}
                 <div
                   ref={galleryStripRef}
-                  className="flex gap-6 pb-2 mt-6 overflow-x-auto -mx-10 px-10 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  // No scroll-snap. It was the direct cause of the gallery
+                  // "barely moving": snapping forces every rest position
+                  // onto an item centre, so a full 100px wheel notch
+                  // resolved to 24px and a 3px line-mode notch to nothing.
+                  // Measured both mandatory and proximity — proximity still
+                  // snapped, because the items sit ~504px apart so there is
+                  // always a snap point in range. The momentum glide below
+                  // is what supplies the settled feel now, and it lands
+                  // where the visitor actually pointed.
+                  className="flex gap-6 pb-2 mt-6 overflow-x-auto -mx-10 px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                   {cs.craft.gallery.slice(1).map((item, i) => {
                     const index = i + 1;
@@ -611,14 +727,14 @@ const ProjectPage = () => {
                       <figure
                         key={item.src}
                         ref={(el) => (galleryRefs.current[index] = el)}
-                        className="overflow-hidden border rounded-lg shadow-lg group shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] snap-center border-[var(--color-border)] transition-[border-color,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:shadow-[0_24px_64px_rgba(0,0,0,0.7)]"
+                        className={`shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] ${GALLERY_CARD}`}
                       >
                         <div className="overflow-hidden aspect-video">
                           <img
                             src={item.src}
                             alt={item.alt}
                             loading="lazy"
-                            className="object-cover w-full h-full transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+                            className={GALLERY_IMG}
                           />
                         </div>
                         <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
@@ -662,12 +778,13 @@ const ProjectPage = () => {
             text=""
             textColor="text-white"
             withScrollTrigger={true}
+            compact
           />
           <div className="px-10 mt-10 md:mt-16">
             <div className="flex justify-end">
               <AnimatedTextLines
                 text={cs.result.text}
-                className="max-w-2xl font-light leading-snug tracking-wide text-right text-white text-2xl md:text-3xl text-pretty"
+                className="max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
               />
             </div>
           </div>
@@ -720,7 +837,7 @@ const ProjectPage = () => {
                 </p>
                 <AnimatedTextLines
                   text={cs.result.award.text}
-                  className="max-w-[60ch] mx-auto mt-6 text-body-lg text-[var(--color-text-secondary)]"
+                  className="max-w-[60ch] mx-auto mt-6 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
                 />
 
                 {/* Floating layered cards, not a flat 2-up grid — a slight
@@ -735,7 +852,7 @@ const ProjectPage = () => {
                     single-column-text state this page has no other
                     precedent for. */}
                 <div className="flex flex-col items-center justify-center max-w-5xl gap-10 mx-auto mt-14 md:flex-row md:gap-6">
-                  <div className="w-full md:w-[480px] overflow-hidden transition-transform border rounded-lg shadow-lg -rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:rotate-0 hover:-translate-y-2">
+                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow] border rounded-lg shadow-lg -rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:rotate-0 hover:-translate-y-2 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
                     <img
                       src={cs.result.award.certificate}
                       alt="AASTU Tech Fest 2025 Hackathon — First Place Winner's Prize certificate, awarded to MediHelp Plus"
@@ -743,7 +860,7 @@ const ProjectPage = () => {
                       className="object-cover w-full aspect-video"
                     />
                   </div>
-                  <div className="w-full md:w-[480px] overflow-hidden transition-transform border rounded-lg shadow-lg rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:-mt-6 hover:rotate-0 hover:-translate-y-2">
+                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow] border rounded-lg shadow-lg rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:-mt-6 hover:rotate-0 hover:-translate-y-2 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
                     <img
                       src={cs.result.award.ceremony}
                       alt="MediHelp team at the AASTU Tech Fest 2025 award ceremony"
@@ -803,7 +920,7 @@ const ProjectPage = () => {
           <div className="w-full h-px mt-4 bg-white/30" />
           <AnimatedTextLines
             text={cs.credits.text}
-            className="max-w-2xl mt-6 text-body-lg text-[var(--color-text-secondary)]"
+            className="max-w-2xl mt-6 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
           />
         </section>
       )}
