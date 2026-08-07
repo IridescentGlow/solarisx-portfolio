@@ -14,6 +14,18 @@ const AnimatedHeaderSection = ({
   // Services, Contact) is unaffected. Lets one consumer style just the
   // "text" line without touching this shared component for everyone else.
   textClassName = "",
+  // Optional, off by default — same additive contract as textClassName, so
+  // every existing caller renders byte-identically. Tightens only the
+  // framing whitespace (top padding, subtitle/title gap, and the padding
+  // around the "text" line), never the type scale itself.
+  //
+  // Exists for ProjectPage.jsx's stacked chapter openers, which pass
+  // text="" and so would otherwise reserve ~128px for a line that renders
+  // nothing. That dead space pushes the title 150px down from the section
+  // top, which in a sticky stack means the pinned chapter's title cannot
+  // fit in the peek above the covering chapter — the layering Services.jsx
+  // gets for free, because its cards put their title ~24px from the top.
+  compact = false,
 }) => {
   const contextRef = useRef(null);
   const headerRef = useRef(null);
@@ -52,7 +64,9 @@ const AnimatedHeaderSection = ({
       <div style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" }}>
         <div
           ref={headerRef}
-          className="flex flex-col justify-center gap-12 pt-16 sm:gap-16"
+          className={`flex flex-col justify-center ${
+            compact ? "gap-4 pt-6 sm:gap-6" : "gap-12 pt-16 sm:gap-16"
+          }`}
         >
           <p
             className={`text-sm font-light tracking-[0.5rem] uppercase px-10 ${textColor}`}
@@ -84,7 +98,7 @@ const AnimatedHeaderSection = ({
       </div>
       <div className={`relative px-10 ${textColor}`}>
         <div className="absolute inset-x-0 border-t-2" />
-        <div className="py-12 sm:py-16 text-end">
+        <div className={`${compact ? "py-6 sm:py-8" : "py-12 sm:py-16"} text-end`}>
           <AnimatedTextLines
             text={text}
             className={`font-light uppercase value-text-responsive ${textColor} ${textClassName}`}
