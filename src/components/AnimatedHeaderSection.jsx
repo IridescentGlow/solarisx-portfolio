@@ -61,7 +61,19 @@ const AnimatedHeaderSection = ({
           </p>
           <div className="px-10">
             <h1
-              className={`flex flex-col gap-12 uppercase banner-text-responsive sm:gap-16 md:block ${textColor}`}
+              // break-words: purely defensive, a no-op for every current
+              // caller. A single-word title (e.g. ProjectPage.jsx's
+              // "Challenge"/"Approach", or this page's own "MediHelp") has
+              // no space for the flex-col per-word wrap below to act on, so
+              // at banner-text-responsive's mobile size it can overflow its
+              // px-10 container and get silently clipped by an ancestor's
+              // overflow-x-hidden — confirmed exactly this happening to
+              // "MediHelp" itself (a pre-existing bug, not introduced by
+              // this change) while auditing ProjectPage.jsx's new
+              // single-word chapter titles. break-words only ever engages
+              // when a word would otherwise overflow, so titles that
+              // already fit render byte-for-byte identically.
+              className={`flex flex-col gap-12 uppercase banner-text-responsive sm:gap-16 md:block break-words ${textColor}`}
             >
               {titleParts.map((part, index) => (
                 <span key={index}>{part} </span>

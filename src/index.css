@@ -247,7 +247,29 @@ body {
 }
 
 @utility banner-text-responsive {
-  @apply text-[68px] sm:text-[118px] md:text-[126px] lg:text-[152px] leading-9 sm:leading-16 lg:leading-20;
+  /* Every tier's size is fit to its own worst case: the container width at
+     the START of that tier's range (~20px safety margin), against
+     "Challenge" — the longest single unbroken word this utility currently
+     renders (ProjectPage.jsx's chapter titles + "MediHelp" itself). A
+     single word has no space for the flex-col per-word wrap in
+     AnimatedHeaderSection to act on, so if it doesn't fit the tier's own
+     font-size on one line, it silently overflows past px-10 and gets
+     clipped by an ancestor's overflow-x-hidden (or, with break-words also
+     added defensively, wraps mid-word into an ugly overlap against this
+     utility's tight leading, which is tuned for the flex-col multi-word
+     case, not in-word wrapping).
+
+     The original values (68/118/126/152) were undersized at three of the
+     four tiers, not just mobile — confirmed by properly checking rendered
+     line count (a forced white-space:nowrap width probe), not just
+     scrollWidth vs clientWidth: that check gives a false negative the
+     moment break-words wraps a word, since a wrapped word's scrollWidth
+     shrinks to match clientWidth by definition, which is exactly how the
+     original 68px mobile overflow and this md-tier gap both went
+     undetected in an earlier pass. Re-verified with the corrected probe
+     across the full width range (375–1920px, extra points at every tier
+     boundary) after landing these values — zero wraps. */
+  @apply text-[48px] sm:text-[90px] md:text-[112px] lg:text-[152px] leading-9 sm:leading-16 lg:leading-20;
 }
 
 @utility value-text-responsive {
