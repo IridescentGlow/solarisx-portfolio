@@ -176,16 +176,16 @@ export const projects = [
     caseStudy: {
       // §2 The Problem
       challenge: {
-        text: "Many communities in Ethiopia face difficulty accessing timely healthcare guidance. MediHelp was built during a full-stack engineering hackathon to close that gap — AI-powered symptom checking, first aid guidance, and educational content, built for people in Ethiopia with limited access to healthcare services, or anyone needing quick health-related guidance.",
+        text: "Many communities in Ethiopia face difficulty accessing timely healthcare guidance.\nMediHelp was built during a full-stack engineering hackathon to close that gap — AI-powered symptom checking, first aid guidance, and educational content, built for people in Ethiopia with limited access to healthcare services, or anyone needing quick health-related guidance.",
       },
       // §3 Research/Discovery + §4 Design Process. §7 Challenges nests here
       // (not its own §4 slot — PROJECT_PAGE_SYSTEM.md's table has none for
       // it) since navigating obstacles is part of "the thinking" Approach
       // is defined to hold.
       approach: {
-        text: "Discovery was informal and time-boxed to a two-day hackathon window — no formal user surveys or interviews, just direct research into the healthcare problem space and conversations with hackathon mentors. The design goal was a simple, accessible experience: clarity and ease of use for people who might be unfamiliar with a digital health tool, deliberately avoiding unnecessary interface complexity. There was no formal wireframing or Figma process — design decisions were made directly during the fast, hackathon-paced build.",
+        text: "Discovery was informal and time-boxed to a two-day hackathon window — no formal user surveys or interviews, just direct research into the healthcare problem space and conversations with hackathon mentors.\nThe design goal was a simple, accessible experience: clarity and ease of use for people who might be unfamiliar with a digital health tool, deliberately avoiding unnecessary interface complexity.\nThere was no formal wireframing or Figma process — design decisions were made directly during the fast, hackathon-paced build.",
         challenges:
-          "The core technical challenges were integrating AI into the product and implementing authentication, both within a strict hackathon deadline. The creative challenge was communicating the importance of healthcare accessibility in a way that felt approachable rather than clinical.",
+          "The core technical challenges were integrating AI into the product and implementing authentication, both within a strict hackathon deadline.\nThe creative challenge was communicating the importance of healthcare accessibility in a way that felt approachable rather than clinical.",
       },
       // §5 Development + §6 My Role, plus the gallery — the visual
       // centrepiece (§1). Screenshot order/captions match the requested
@@ -195,9 +195,9 @@ export const projects = [
       // edited out of the images themselves.
       craft: {
         development:
-          "Built by a team of ten — five front-end developers and five back-end developers — collaborating in person and coordinating over Telegram. The frontend shipped the hero section (including the hero video experience), additional site sections, site-wide animations, a contact section, blog listings, and a team section. Technical involvement extended to AI integration, authentication, and API communication, built on Django 5.2, Django REST Framework, PostgreSQL, and JWT on the backend; React, Tailwind CSS, Sentry, and Web Vitals on the frontend; and the Google Gemini API for AI.",
+          "Built by a team of ten — five front-end developers and five back-end developers — collaborating in person and coordinating over Telegram.\nThe frontend shipped the hero section (including the hero video experience), additional site sections, site-wide animations, a contact section, blog listings, and a team section.\nTechnical involvement extended to AI integration, authentication, and API communication, built on Django 5.2, Django REST Framework, PostgreSQL, and JWT on the backend; React, Tailwind CSS, Sentry, and Web Vitals on the frontend; and the Google Gemini API for AI.",
         myRole:
-          "Front-end developer and motion designer. Personally built the hero section (hero video experience), the contact section, blog listings, and the team section, and contributed animations across the site. Also head of video editing, and created the project's graphics design, videos, and visual assets independently.",
+          "Front-end developer and motion designer. Personally built the hero section (hero video experience), the contact section, blog listings, and the team section, and contributed animations across the site.\nAlso head of video editing, and created the project's graphics design, videos, and visual assets independently.",
         gallery: [
           {
             src: "/assets/projects/medihelp/hero/hero.webp",
@@ -247,7 +247,7 @@ export const projects = [
       // the certificate corroborate §8's claim — read directly off the
       // certificate image itself during the media milestone, not invented.
       result: {
-        text: "MediHelp shipped as a complete, working full-stack healthcare platform — an AI-powered assistant combining symptom checking, first aid guidance, and educational content. Usage figures, adoption numbers, or any real-world impact metric beyond the hackathon result itself aren't available; nothing is invented to fill that gap.",
+        text: "MediHelp shipped as a complete, working full-stack healthcare platform — an AI-powered assistant combining symptom checking, first aid guidance, and educational content.\nUsage figures, adoption numbers, or any real-world impact metric beyond the hackathon result itself aren't available; nothing is invented to fill that gap.",
         award: {
           text: "First place at AASTU Tech Fest 2025 Hackathon — certificates awarded, a cash prize received, and named the hackathon's best solution.",
           certificate: "/assets/projects/medihelp/award/certificate.webp",
@@ -257,7 +257,7 @@ export const projects = [
       // §5's team structure. Individual teammates beyond the creator's own
       // role are never named in the case study — not invented here either.
       credits: {
-        text: "MediHelp was built by a ten-person team: five front-end developers and five back-end developers, collaborating in person and coordinating over Telegram. Individual teammates beyond the creator's own role aren't named in the verified source material.",
+        text: "MediHelp was built by a ten-person team: five front-end developers and five back-end developers, collaborating in person and coordinating over Telegram.\nIndividual teammates beyond the creator's own role aren't named in the verified source material.",
       },
       // MediHelp's own brand favicon (distinct from logo.png — see the case
       // study's Media section). Used once, next to the Live link in Links.
