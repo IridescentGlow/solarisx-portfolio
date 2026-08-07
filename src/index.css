@@ -305,6 +305,43 @@ body {
   will-change: transform, opacity;
 }
 
+/* Ambient light sweep for the Award chapter (ProjectPage.jsx) — a soft
+   reflected highlight that crosses the section once, twice, when it is
+   meaningfully on screen. Deliberately NOT a lens flare, laser, or bright
+   stripe: the alpha peaks around 6–10%, the band is nearly half the
+   section wide, and a heavy blur feathers both edges into nothing, so it
+   reads as illumination moving across a surface rather than as a light
+   source. Sitting behind `relative` content means it can never reduce
+   text contrast.
+
+   Colors derive from existing tokens via color-mix() — the same idiom
+   click-burst already uses — so this stays tied to --color-accent instead
+   of hardcoding a new value. The 100deg angle matches gold-shimmer-text's
+   gradient, keeping the two gold treatments on this page consistent.
+
+   Top/bottom are pulled outside the parent so the blur's vertical falloff
+   is clipped away by the parent's overflow-hidden; otherwise the band's
+   own horizontal edges would be visible as a seam. Only `transform` is
+   animated (GSAP xPercent), which stays on the compositor. */
+@utility award-light-sweep {
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-accent) 10%, transparent) 40%,
+    color-mix(in srgb, var(--color-text-primary) 6%, transparent) 50%,
+    color-mix(in srgb, var(--color-accent) 10%, transparent) 60%,
+    transparent 100%
+  );
+  filter: blur(48px);
+  will-change: transform;
+}
+
 /* Gradient-fill text for the shimmer above. -webkit-text-fill-color (not
    plain `color`) does the fill, so this composes safely alongside a
    textColor="text-white" class applied by the caller — a same-property

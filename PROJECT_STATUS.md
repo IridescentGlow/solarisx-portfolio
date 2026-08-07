@@ -92,8 +92,280 @@ placeholders.
 
 ## Changelog
 
-## Milestone — MediHelp Project Page Implementation
+## Milestone — Chapter Stack Transition + Award Light Sweep
 *(this milestone)*
+
+Interaction refinement only — no redesign, no content changes.
+
+**Chapter stack (Challenge → Approach → Craft)**
+
+- Reuses `Services.jsx`'s Capabilities interaction as-is rather than
+  approximating it. Worth recording what that interaction actually *is*,
+  because it isn't obvious from the outside: it's plain CSS
+  `position: sticky` with a staggered `top`, an opaque background and a
+  top border. GSAP never drives the stacking there — only the entrance
+  reveals. So there's no pinning, no scroll hijacking and no new
+  scrolling system here either.
+- Challenge pins at `top: 0`; Approach pins 2.5em lower, leaving a sliver
+  of Challenge visible above it as the stack edge (the same peek Services'
+  staggered `top` produces). Verified by tracking viewport-relative tops
+  while scrolling: Challenge holds at 0, Approach holds at 40px, Craft
+  slides up over both.
+- **Craft is deliberately not sticky.** At ~2095px it's far taller than
+  any viewport, and a pinned element taller than its own viewport buries
+  its lower content permanently — pinning it would have made the gallery
+  unreachable. In normal flow it does exactly what was asked anyway
+  (scrolls up over the pinned Approach); `relative z-[3]` makes it paint
+  above the pinned chapters, since sticky elements are positioned and
+  would otherwise paint over a static sibling.
+- The three chapters are wrapped in one container, which is what *bounds*
+  the effect: sticky releases at its containing block's bottom, so the
+  stack is over the moment Craft ends. Confirmed Result is
+  `position: static` — the effect cannot reach it, Credits or Links.
+- **Viewport-height gate, because the interaction is only safe when the
+  pinned chapter fits.** Measured: the two pinned chapters top out at
+  810px from 1024px wide up, reflow to 936px in the 768–1023px band, and
+  reach 1333px on mobile. That needs two media queries, not one — the
+  height a stack requires depends on the width it's at — and mobile is
+  excluded outright rather than shipping an interaction that hides
+  content. Below the gate the chapters render in normal document flow.
+  Verified all nine branches (stacks at 1920×1080 / 1440×900 / 1024×900 /
+  1023×1030 / 820×1180 / 768×1030; falls back at 1440×800 / 820×900 /
+  390×844) with a check that flags any chapter needing more room than its
+  viewport gives — zero clipping warnings.
+- **Prerequisite bug fixed**: `<main>` carried `overflow-x-hidden`, which
+  makes the element a scroll container and silently breaks
+  `position: sticky` for every descendant — the stack would simply never
+  have pinned. Swapped to `overflow-x-clip`, which gives the same
+  horizontal-overflow protection without establishing a scroll container.
+  Re-verified zero horizontal overflow at 390/700/820/1440px afterwards.
+- Dropped Challenge and Craft from the scale-scrub transition added in an
+  earlier pass: the stack is now their transition, and a scrub transform
+  on a stacked chapter fights it (a transform also makes an element a
+  containing block, which is another way sticky gets broken by accident).
+  Result and the Award chapter keep theirs.
+
+**Award light sweep**
+
+- Two soft light sweeps cross the Award chapter once, staggered 0.9s
+  apart, behind all content. New `award-light-sweep` utility in
+  `index.css`: alpha peaks at 6–10%, band is 45% of the section wide,
+  `blur(48px)` feathers both edges, colours derived from existing tokens
+  via `color-mix()` (the idiom `click-burst` already uses) and the 100deg
+  angle matched to `gold-shimmer-text`. Deliberately not a flare, laser
+  or bright stripe.
+- Trigger uses ScrollTrigger's `"55% bottom"` — literally "the point 55%
+  down the section reaches the viewport bottom", i.e. 55% of the section
+  is visible — so the requested 50–60% window is expressed exactly rather
+  than approximated with a viewport percentage. `once: true` guarantees
+  exactly two sweeps total.
+- `EASE.connective` (0.65, 0, 0.35, 1) is the one true ease-in-out in the
+  canonical set — the right curve for "no abrupt starts or stops".
+  `EASE.cinematic` would have been wrong (a hard ease-out that whips in
+  and crawls out). `EASE`/`DURATION.revelation` stay out entirely per
+  `PROJECT_PAGE_SYSTEM.md` §7. Duration is `DURATION.reveal`.
+- Verified by sampling the transform over time, not just by eye: both
+  elements held at the start position before the trigger, sweep 2 still
+  parked while sweep 1 was underway (stagger confirmed), both settled once
+  and never repeated. The easing profile measured 8px of travel in the
+  first 150ms, ~1200px through the middle and 235px in the final second —
+  a textbook ease-in-out. Trigger fired with 584px of 1061px visible =
+  55.0% exactly.
+- Skipped entirely under `prefers-reduced-motion`: this is pure
+  atmosphere, and `lib/motion.js`'s global `gsap.defaults({duration: 0})`
+  does not collapse tweens that set their own duration, as this one must.
+
+- `npm run build` and `npm run lint` both pass clean.
+- Files touched: `src/pages/ProjectPage.jsx`, `src/index.css` (the new
+  sweep utility). No new dependencies — `react-responsive` was already in
+  use by `Services.jsx` and `Hero.jsx`.
+
+### Milestone — MediHelp Project Page Art Direction, Third Pass
+
+- Structural fix, not another styling adjustment: Hero.jsx/About.jsx/
+  Services.jsx never wrap their content in a centred `max-w-Nxl mx-auto`
+  box — they use `px-10` as a gutter and nothing else, and let
+  `AnimatedHeaderSection`'s own banner-scale title carry the composition.
+  Every chapter opener (Challenge/Approach/Craft/Result) now reuses
+  `AnimatedHeaderSection` itself — the exact component and scale Hero/
+  About/Services/Contact use for their own frame entrances — instead of
+  approximating it with `text-4xl`/`text-5xl`. `text=""` deliberately:
+  the case study's real paragraphs are genuine reading-length prose, not
+  the short single-line Hero/About/Services pass through that slot, so
+  they render separately below at a readable size, offset (not centred).
+- Two concrete, verifiable bugs fixed in the screenshot showcase:
+  - **Cropping.** Every source screenshot is a real 1920×1080 (16:9)
+    capture — confirmed directly, not assumed. The previous pass forced
+    the featured frame into 21:9 and the strip into 4:3, cropping real
+    product screenshots (the featured image was missing its entire top
+    navbar). `aspect-video` (16:9) on both now matches the source
+    exactly, so `object-cover` has nothing left to crop.
+  - **Horizontal scroll.** `overflow-x-auto` alone only responds to a
+    trackpad's real horizontal swipe or touch drag — a plain mouse wheel
+    has no native effect on it, which was the exact reported bug (page
+    scrolls vertically, the strip never moves). Fixed with a real
+    non-passive `wheel` listener (React's synthetic `onWheel` can't
+    reliably `preventDefault()` here — a documented React 17+ limitation,
+    not something a handler prop can work around) that converts a
+    vertical-dominant wheel delta into `scrollLeft`, while a genuine
+    trackpad horizontal gesture and mobile touch swipe are left to their
+    already-working native behavior, and either scroll edge hands off to
+    normal page scroll rather than trapping the visitor. Verified
+    functionally with a real Playwright `mouse.wheel()` dispatch, not
+    just visually: scrollLeft moved 0→528 while `window.scrollY` stayed
+    fixed, and scrolling resumed normally once the strip was exhausted.
+- **Real regression caught during verification, not left in**: reusing
+  `AnimatedHeaderSection` for single-word chapter titles ("Challenge",
+  "Approach") surfaced a genuine pre-existing bug in the shared
+  `banner-text-responsive` utility — a single unbroken word has no space
+  for the component's flex-col per-word wrap to act on, so at 3 of its 4
+  size tiers it could overflow past `px-10` and get silently clipped by
+  an ancestor's `overflow-x-hidden`. Confirmed "MediHelp" itself (the
+  page's own existing title) was already affected — not something this
+  pass introduced. First fix attempt (`break-words` alone) traded
+  invisible clipping for visible overlap, since the utility's line-height
+  is tuned for the flex-col multi-word case, not in-word wrapping; a
+  first sizing attempt was verified with a flawed check
+  (`scrollWidth`-vs-`clientWidth`, which false-negatives the moment a
+  word wraps) and missed an entire breakpoint tier. Re-verified properly
+  — forcing `white-space:nowrap` to measure true text width regardless of
+  current wrap state — across 19 widths spanning every tier boundary
+  (375–1920px). All clear. `break-words` stays on as a defensive
+  backstop; the real fix is each tier's font-size now fit to its own
+  worst-case container width.
+- **Discovered, not fixed — out of scope**: the same corrected audit
+  found Home's own `Services.jsx` title "Capabilities" (12 characters,
+  longer than "Challenge") also overflows `banner-text-responsive` at
+  several breakpoints, pre-existing and unrelated to this milestone
+  (`/projects/medihelp` only; `Services.jsx` untouched). Flagged for a
+  separate task, not fixed here.
+- Verified Home's own titles (`Dagim Demissie`, `Works`, `About`,
+  `Contact`) are unaffected by the `banner-text-responsive` and
+  `AnimatedHeaderSection` changes — checked with the same corrected
+  wrap-detection probe, plus a direct screenshot comparison at desktop
+  and mobile.
+- `npm run build` and `npm run lint` both pass clean.
+- Files touched: `src/pages/ProjectPage.jsx` (the page itself),
+  `src/components/AnimatedHeaderSection.jsx` (the `break-words`
+  backstop — additive, a no-op for any title that already fits, so every
+  existing caller is unaffected), `src/index.css`
+  (`banner-text-responsive` tier resizing). No new dependencies.
+
+### Milestone — MediHelp Project Page Art Direction, Second Pass
+
+- Found and fixed a real bug in the first pass, not a design nitpick: the
+  Result marquee (`First Place` / `AASTU Tech Fest 2025`) only had 2 items.
+  `Marquee.jsx`'s `horizontalLoop()` needs the combined item width to
+  comfortably exceed the viewport, or the loop shows a visible empty gap
+  before repeating — confirmed exactly that with a 3-frame capture at
+  1440px (the loop went text → stars → dead air → repeat). Every home-page
+  marquee (`Contact.jsx`, `ContactSummary.jsx`) uses 5 items for the same
+  reason; matched that convention. Re-verified with the same 3-frame
+  capture — continuous text at every frame, no gap.
+- Rebuilt Challenge and Result around Hero.jsx's own asymmetric signature
+  (title block on one side, statement text on the other, right-aligned —
+  `AnimatedHeaderSection`'s actual layout) instead of the first pass's
+  centered-but-big treatment, which was still fundamentally a centered
+  paragraph block. Result mirrors Challenge (numeral+label swaps sides)
+  rather than repeating it — a bookend by rhyme, not duplication.
+- Approach's "Where It Got Hard" callout became an actual card: raised
+  surface, icon badge, hover lift — not a paragraph with a left border.
+- Craft's gallery rebuilt entirely. The first pass's 3-column grid of
+  same-size thumbnails was evidence "presented as a set" but too small to
+  read as the page's stated centerpiece. Now: one large featured frame
+  (21:9, the marketing hero shot) full-width in the chapter, then the
+  remaining seven in a horizontal scroll-snap strip at up to 480px each
+  — closer to how a product page presents screens than how a document
+  embeds thumbnails. Next item deliberately peeks at the viewport edge as
+  the scroll affordance; a small caption reinforces it. No new library —
+  native CSS scroll-snap + Tailwind's arbitrary-property escape hatch for
+  the hidden scrollbar.
+- Award became its own raised, brighter chapter (`surface-1`/`rounded-4xl`,
+  matching Craft) with a soft radial spotlight behind the trophy (existing
+  `--color-accent-subtle` token, no new color). "First Place" pulled out
+  as its own 4xl/6xl display statement — the same fact the body copy
+  already states, just given typographic weight instead of staying a
+  small tracked label. Certificate/ceremony cards sized up from 384px to
+  480px, matching the gallery strip's own item width.
+- Added a continuous-motion scrub transition (About.jsx's own technique:
+  scale 0.97, scrollTrigger-scrubbed, `power1.inOut` — outside the four
+  canonical reveal curves, same as About's version) at the page's four
+  heaviest beats — Challenge, both raised chapters, Result — so leaving
+  one doesn't read as a hard stop before blank space. Not applied
+  everywhere, matching the restraint of About's own single use on the
+  home page.
+- Re-verified the tablet-gap breakpoint discipline (`md`, not `sm`) that
+  was already fixed once for the old award-card layout still holds for
+  every new responsive element — checked scrollWidth === innerWidth at
+  390/700/820/1440px explicitly, given the new horizontal-scroll gallery
+  and floating cards were new surface area for exactly that kind of bug.
+  Zero console errors at any width.
+- `npm run build` and `npm run lint` both pass clean.
+- Only `src/pages/ProjectPage.jsx` touched — no other component, route, or
+  design token changed. No new dependencies.
+
+### Milestone — MediHelp Project Page Art Direction
+
+- Full visual redesign of the case-study sections (Challenge/Approach/
+  Craft/Result/Credits) — the previous pass was architecturally correct
+  but funneled every section through one identical heading+body wrapper,
+  which read as documentation rather than the home page's cinematic
+  register. Removed that generic wrapper; every section now has its own
+  composition, pulled directly from patterns the home page already uses
+  rather than invented fresh:
+  - **Challenge** — typography-first, centered, oversized (text-3xl→5xl,
+    font-light) instead of a paragraph block, echoing the scale Hero/
+    Services headings actually use (the project's own `--text-h2` token
+    turned out to be far smaller than anything the home page uses for a
+    real heading — a real gap the previous pass didn't catch).
+  - **Approach** — split/offset layout (`lg:grid-cols-[1fr_2fr]`), per
+    COMPOSITION_PRINCIPLES.md §3's explicit rule for About-style content:
+    "text block positioned toward one side... not a centered container."
+    Challenges nests inside as an accent-bordered callout.
+  - **Craft** — raised onto `--color-surface-1` with `rounded-4xl`, the
+    same giant-radius "chapter" language About/Services use where the
+    page changes register. Gallery rebuilt: clipPath wipe-in reveal
+    (About.jsx's own portrait-reveal technique, staggered across 8
+    images), hover scale + lifted shadow, a middle-column vertical offset
+    per row of three so it reads as composed rather than tiled, and
+    numbered captions matching Services.jsx's `0{n}` list pattern.
+  - **Result** — centered resolution beat mirroring Challenge's register
+    (this page's own bookend structure). Award section adds the trophy +
+    `animate-trophy-glow` treatment — a direct callback to the Works
+    index row's own hover state for this exact project, not a new motif.
+    Certificate/ceremony images become slightly tilted "floating cards"
+    (opposing rotation, settling flat on hover) instead of a flat 2-up
+    grid. One `Marquee` band (the same component Contact/ContactSummary
+    use) repeats the award's own verified facts as a rhythm break.
+  - **Credits** — Contact.jsx's own label/thin-divider/value pattern,
+    reused verbatim as the page's quiet closing register before Links.
+  - Every heading (not just body paragraphs) now reveals on scroll —
+    ported from Services.jsx's ref-array + forEach + per-element
+    ScrollTrigger pattern, using the canonical `EASE.cinematic`/
+    `DURATION.reveal` tokens in place of Services' pre-token-system ease.
+  - No new easing curves, motion tokens, or CSS systems introduced —
+    everything traces to `lib/motion.js`'s four canonical curves, this
+    project's own `--shadow-lg`/`--radius-lg` tokens (present in
+    `index.css` since the design-tokens port but never actually used
+    until this pass), and Tailwind's built-in `group`/`group-hover`.
+- **Real regression caught and fixed during verification, not left in**:
+  the new floating award cards initially used a `sm:` breakpoint for
+  their row switch — reintroducing the exact tablet-gap inconsistency
+  (multi-column media next to still-single-column text at ~700px) that
+  was already found and fixed for the gallery grid in the previous
+  milestone. Changed to `md:`, matching the page's one other responsive
+  split, and re-verified at 700px/tablet/mobile/desktop.
+- Verified via rendered screenshots (headless Chromium) at desktop
+  (1440px), tablet (820px), the 700px tablet gap, and mobile (390px),
+  plus a direct screenshot comparison against the home page's hero to
+  confirm the shared scale/weight/subtitle/divider vocabulary. Zero
+  horizontal overflow at any width (`scrollWidth` === `innerWidth`,
+  checked explicitly given the new rotated/offset elements).
+- `npm run build` and `npm run lint` both pass clean.
+- Only `src/pages/ProjectPage.jsx` was touched — no other project,
+  component, route, or design token changed.
+
+### Milestone — MediHelp Project Page Implementation
 
 - Implemented the full MediHelp case study on `/projects/medihelp`,
   populating `caseStudy` in `src/constants/index.js` with real content
