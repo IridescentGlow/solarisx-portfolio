@@ -6,10 +6,7 @@ import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { EASE, DURATION } from "../lib/motion";
-
-// Project previews can be either a still or a silent looping clip, so the
-// preview surfaces pick the element from the file extension.
-const isVideo = (src) => /\.(mp4|webm|ogv|mov)$/i.test(src);
+import { isVideo } from "../lib/media";
 
 const Works = () => {
   const navigate = useNavigate();
@@ -115,17 +112,14 @@ const Works = () => {
   // Root cause (confirmed against react-router's source): Link's own click
   // handler runs ours first, then — since nothing prevented it — synchronously
   // calls preventDefault()+navigate() in the same event. React's route swap
-  // unmounts this whole subtree (burst span included) before the browser gets
-  // a chance to paint a single frame, so the animation, though genuinely
-  // created and started, is never actually seen. The external links have the
-  // same practical symptom for a related reason: the browser shifts focus to
-  // the newly-opened tab within milliseconds, before the burst has had time
-  // to register on screen in the original one.
+  // (internal) or the new tab opening (external) both happen before the
+  // browser gets a chance to paint a single frame, so the burst — though
+  // genuinely created and started — is never actually seen.
   //
   // Fix: spawn and start the burst first, then delay the actual navigation
-  // (route change or tab open) just long enough to guarantee a paint before
-  // either happens. 150ms is enough to see it and short enough to still read
-  // as instant (per the debug follow-up; the animation itself is unchanged).
+  // just long enough to guarantee a paint before it happens. 150ms is enough
+  // to see it and short enough to still read as instant (per the debug
+  // follow-up; the animation itself is unchanged).
   const NAVIGATION_DELAY_MS = 150;
 
   // Cinematic timing for the burst itself. Kept well clear of the 150ms
@@ -185,6 +179,13 @@ const Works = () => {
     if (isModifiedClick(e)) return;
 
     e.preventDefault();
+    // Internal case studies now navigate in the SAME tab (client-side, via
+    // react-router's navigate()) so the burst is seen on the page it was
+    // clicked from, then the route changes underneath it. ScrollToTop
+    // (mounted in App.jsx) resets scroll position on every route change, so
+    // this doesn't reintroduce the earlier "opens halfway down" bug.
+    // External links still open in a new tab — unrelated browsing context,
+    // nothing to scroll-reset or navigate() there.
     window.setTimeout(() => {
       if (project.caseStudy) {
         navigate(`/projects/${project.slug}`);

@@ -10,6 +10,10 @@ const AnimatedHeaderSection = ({
   text,
   textColor,
   withScrollTrigger = false,
+  // Optional, empty by default — every existing caller (Hero, Works, About,
+  // Services, Contact) is unaffected. Lets one consumer style just the
+  // "text" line without touching this shared component for everyone else.
+  textClassName = "",
 }) => {
   const contextRef = useRef(null);
   const headerRef = useRef(null);
@@ -71,7 +75,7 @@ const AnimatedHeaderSection = ({
         <div className="py-12 sm:py-16 text-end">
           <AnimatedTextLines
             text={text}
-            className={`font-light uppercase value-text-responsive ${textColor}`}
+            className={`font-light uppercase value-text-responsive ${textColor} ${textClassName}`}
           />
         </div>
       </div>

@@ -119,6 +119,21 @@
     }
   }
 
+  /* Signature typography moment for the MediHelp case study's "Award Winning
+     Solution" line (ProjectPage.jsx) — a single gold sweep that settles and
+     stops, not a loop, since this sits on a page meant to be read rather
+     than a hover-only accent. Runs once (per CREATIVE_DIRECTION_BOARD.md §1:
+     Direction C is a scarce exception, used here and nowhere else). */
+  --animate-gold-shimmer: gold-shimmer 2.5s var(--ease-cinematic) 1 forwards;
+  @keyframes gold-shimmer {
+    0% {
+      background-position: 200% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
   /* ------------------------------------------------------------------ */
   /* Solarisx canonical design tokens — ported from                     */
   /* docs/design/DESIGN_SYSTEM_TOKENS.md (v1.0). Additive: the legacy   */
@@ -266,5 +281,26 @@ body {
   );
   pointer-events: none;
   will-change: transform, opacity;
+}
+
+/* Gradient-fill text for the shimmer above. -webkit-text-fill-color (not
+   plain `color`) does the fill, so this composes safely alongside a
+   textColor="text-white" class applied by the caller — a same-property
+   `color` conflict would depend on unpredictable utility cascade order,
+   text-fill-color doesn't have that problem since it isn't the same
+   property. Only existing tokens: accent, accent-dim, text-primary. */
+@utility gold-shimmer-text {
+  background: linear-gradient(
+    100deg,
+    var(--color-accent-dim) 20%,
+    var(--color-text-primary) 50%,
+    var(--color-accent) 80%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: var(--animate-gold-shimmer);
 }
 
