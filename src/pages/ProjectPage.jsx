@@ -219,6 +219,34 @@ const ProjectPage = () => {
     });
   }, [project]);
 
+  // Art direction: the page's two big statements drift horizontally as they
+  // transit, borrowing ServiceSummary.jsx's signature technique verbatim —
+  // scrubbed xPercent bounded by the element's own transit ("top 80%" to
+  // "bottom top"), no easing curve, so it is tied to scroll position rather
+  // than to time. Home uses 20–100 xPercent there because those are single
+  // words with a whole screen to move across; these are sentences, so the
+  // amplitude is 4 and reads as parallax rather than as a slide. Transform
+  // only — it changes no layout height, so the chapter stack's height gate
+  // is unaffected.
+  useGSAP(() => {
+    gsap.utils.toArray(".statement-drift").forEach((el) => {
+      gsap.fromTo(
+        el,
+        { xPercent: 4 },
+        {
+          xPercent: -4,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 80%",
+            end: "bottom top",
+            scrub: true,
+          },
+        }
+      );
+    });
+  }, [project]);
+
   // Award ambient light sweep. Fires when 45% of the Award chapter has
   // scrolled into view — ScrollTrigger's `"45% bottom"` means "the point
   // 45% down the trigger reaches the viewport bottom", which is literally
@@ -458,8 +486,16 @@ const ProjectPage = () => {
           rather than true edge-to-viewport bleed: this clip's own background
           is a light near-white, so an unframed full-bleed treatment would
           fight the page's dark theme instead of sitting inside it. */}
-      <div ref={mediaRef} className="px-10 mt-20 md:mt-32">
-        <div className="max-w-5xl mx-auto overflow-hidden border-8 rounded-lg shadow-lg border-[var(--color-border)]">
+      {/* Art direction: this is the page's opening image, and it was sitting
+          at max-w-5xl — about 40% of the viewport, reading as an embedded
+          figure rather than a frame that owns the screen. Home's Hero owns
+          its whole viewport; this now does the same, with real air above and
+          below so it lands as a held shot instead of a thumbnail. The border
+          treatment is unchanged: §6's framing decision was about this clip's
+          light background fighting the dark theme, which is a question of
+          the frame, not of scale. */}
+      <div ref={mediaRef} className="px-10 mt-24 md:mt-40">
+        <div className="max-w-7xl mx-auto overflow-hidden border-8 rounded-lg shadow-lg border-[var(--color-border)]">
           {isVideo(project.image) ? (
             <video
               src={project.image}
@@ -523,7 +559,7 @@ const ProjectPage = () => {
               <div className="flex justify-end">
                 <AnimatedTextLines
                   text={cs.challenge.text}
-                  className="max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
+                  className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
                 />
               </div>
             </div>
@@ -784,7 +820,7 @@ const ProjectPage = () => {
             <div className="flex justify-end">
               <AnimatedTextLines
                 text={cs.result.text}
-                className="max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
+                className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
               />
             </div>
           </div>
@@ -792,7 +828,14 @@ const ProjectPage = () => {
           {cs.result.award && (
             <div
               ref={awardChapterRef}
-              className="relative mt-24 overflow-hidden md:mt-32 bg-[var(--color-surface-1)] rounded-4xl"
+              // Art direction: the pause before the payoff. Home never cuts
+              // straight from a content frame to its emotional peak — it
+              // holds ContactSummary for ~1700px of almost-empty screen
+              // before Contact arrives. This gap was 96/128px, which read as
+              // "next section" rather than as anticipation. Widened so the
+              // Result statement is allowed to finish and the screen empties
+              // out before FIRST PLACE lands.
+              className="relative mt-40 overflow-hidden md:mt-64 bg-[var(--color-surface-1)] rounded-4xl"
             >
               {/* Soft spotlight behind the trophy — existing
                   --color-accent-subtle token, not a new color. */}

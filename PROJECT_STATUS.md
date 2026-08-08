@@ -92,8 +92,103 @@ placeholders.
 
 ## Changelog
 
-## Milestone — Premium Polish: Typography Rhythm, Gallery Depth
+## Milestone — Final Creative Direction: Moments and Pacing
 *(this milestone)*
+
+An art-direction pass, not an implementation one. Started by studying the
+home page as an experience — reading `ServiceSummary.jsx` and
+`ContactSummary.jsx` closely and capturing them mid-scroll — to work out
+*why* it feels cinematic rather than to copy its layouts.
+
+**What the home page is actually doing**
+
+Its rhythm is not section → section → section. It alternates dense
+content frames with sparse, purely typographic **moments** that carry no
+information at all:
+
+- `ServiceSummary` — four giant words at `contact-text-responsive`, no
+  container, no background, pre-offset asymmetrically
+  (`translate-x-16` / `-translate-x-48` / `translate-x-48`) and then
+  scrubbed further apart on scroll (`xPercent` 20/−30/100/−100) until
+  they clip off both screen edges, joined by gold bars, one word italic.
+  Captured mid-scroll, roughly 80% of the viewport is empty.
+- `ContactSummary` — pinned for ~800px, marquee above and below, a giant
+  centred quote mixing weight, italic and gold within one sentence.
+
+So the arc is Experience → **Moment** → Experience → **Moment** →
+Resolution. The project page had exactly one moment (FIRST PLACE) and it
+was at the very end; everything before it delivered information
+continuously.
+
+**What changed**
+
+1. **The opening image now owns the screen.** It was `max-w-5xl` — about
+   40% of the viewport, reading as an embedded figure rather than a held
+   shot. Widened with real air above and below so the page opens on a
+   cinematic frame, the way Hero opens on its 3D scene. The border
+   treatment is untouched: `PROJECT_PAGE_SYSTEM.md` §6's framing decision
+   was about this clip's light background fighting the dark theme, which
+   is a question of the frame, not of scale.
+2. **A pause before the payoff.** The gap before the Award chapter was
+   96/128px, which read as "next section" rather than as anticipation.
+   Widened to 160/256px so the Result statement finishes and the screen
+   empties before FIRST PLACE arrives — the same anticipation → payoff
+   beat Home builds with `ContactSummary` before `Contact`.
+3. **The page's two big statements now drift on scroll**, borrowing
+   `ServiceSummary`'s signature technique verbatim: scrubbed `xPercent`
+   bounded by the element's own transit, `ease: "none"`, tied to scroll
+   position rather than to time. Amplitude is 4 rather than Home's
+   20–100 — those are single words with a screen to cross, these are
+   sentences — so it reads as parallax, not as a slide. Measured range
+   is ~54px end to end. Transform only, so it changes no layout height.
+
+**Design decisions worth recording**
+
+- **No new display copy was invented to manufacture a moment.** The
+  obvious way to give the first half a `ServiceSummary`-style interlude
+  is to distil the product into four big words. Every prior milestone on
+  this page has refused to invent content, and a moment that exists only
+  to be a moment fails this pass's own test ("if it does none of those,
+  question whether it belongs"). The page's moments therefore come from
+  scale, pacing and emptiness applied to material that is already there.
+- **The Challenge statement was deliberately not raised to
+  `contact-text-responsive`.** It is the page's emotional line and would
+  make a strong early peak, but Challenge is a *pinned* chapter: at that
+  scale it would grow past the stack's height gate and its own lower
+  content would become unreachable. The gate exists precisely to prevent
+  that, so the moment budget went to the opening image instead — which is
+  outside the stack and costs nothing structurally.
+- **Restraint on gold.** Home's moments use gold bars and italic
+  emphasis inside the statement. Adding either here would have pushed the
+  accent past the scarcity `CREATIVE_DIRECTION_BOARD.md` §1 requires,
+  given the page already carries the shimmer title, the trophy, the award
+  label and accent borders.
+
+**Honest remaining differences** (deliberate, not overlooked)
+
+- Home's body copy runs ~30px; this page's runs 18px, because
+  `PROJECT_PAGE_SYSTEM.md` §8 designates `--text-body-lg` for case-study
+  reading. This is the largest remaining visual difference between the
+  two pages and is a documentation decision, not an oversight — worth a
+  deliberate call if the two should be reconciled.
+- Home has two pure-atmosphere interludes; this page has one peak. Closing
+  that gap honestly requires new display copy, which is the user's call to
+  make, not mine.
+
+**Verified**
+
+- Nothing regressed: wheel exact (100px notch → 100px, line-mode → 48px,
+  edge hands off), overlap still pins 0/160 with the title inside the
+  band at 80% coverage, shine still replays on both re-entry paths — and
+  its end boundary is still reachable (7000px against 7300px of scroll),
+  which the added spacing could have broken.
+- Stack gates clean at 1920×1080, 1440×900, 1024×900, 820×1180 and
+  768×1120; correct fallback at 1440×800 and 390×844. Zero clipping, zero
+  horizontal overflow, zero runtime errors at any size.
+- `npm run build` and `npm run lint` both pass.
+- Files touched: `src/pages/ProjectPage.jsx` only.
+
+### Milestone — Premium Polish: Typography Rhythm, Gallery Depth
 
 Refinement only — no redesign, no new visual language. Started by
 measuring both pages side by side rather than working from memory.
