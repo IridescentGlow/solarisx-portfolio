@@ -43,10 +43,10 @@ I work by exploring, building, reviewing, then polishing until a thing feels ine
         subTitle={"Behind the work"}
         title={"About"}
         text={text}
-        textColor={"text-white"}
+        textColor={"text-ink"}
         withScrollTrigger={true}
       />
-      <div className="flex flex-col items-center justify-between gap-16 px-10 pb-16 text-xl font-light tracking-wide lg:flex-row md:text-2xl lg:text-3xl text-white/60">
+      <div className="flex flex-col items-center justify-between gap-16 px-10 pb-16 text-xl font-light tracking-wide lg:flex-row md:text-2xl lg:text-3xl text-ink/60">
         {/* TODO(content): replace with a real portrait — this is the template's stock photo */}
         <img
           ref={imgRef}

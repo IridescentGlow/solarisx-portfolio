@@ -40,21 +40,21 @@ const Contact = () => {
           subTitle={"Let's continue the conversation"}
           title={"Contact"}
           text={text}
-          textColor={"text-white"}
+          textColor={"text-ink"}
           withScrollTrigger={true}
         />
-        <div className="flex px-10 font-light text-white uppercase lg:text-[32px] text-[26px] leading-none mb-10">
+        <div className="flex px-10 font-light text-ink uppercase lg:text-[32px] text-[26px] leading-none mb-10">
           <div className="flex flex-col w-full gap-10">
             <div className="social-link">
               <h2>E-mail</h2>
-              <div className="w-full h-px my-2 bg-white/30" />
+              <div className="w-full h-px my-2 bg-ink/30" />
               <p className="text-xl tracking-wider lowercase md:text-2xl lg:text-3xl">
                 contactphazotron@gmail.com
               </p>
             </div>
             <div className="social-link">
               <h2>Social Media</h2>
-              <div className="w-full h-px my-2 bg-white/30" />
+              <div className="w-full h-px my-2 bg-ink/30" />
               <div className="flex flex-wrap gap-2">
                 {socials.map((social, index) => (
                   <a
@@ -64,7 +64,7 @@ const Contact = () => {
                     rel="noopener noreferrer"
                     aria-label={social.name}
                     title={social.name}
-                    className="transition-colors duration-200 hover:text-white/80"
+                    className="transition-colors duration-200 hover:text-ink/80"
                   >
                     <Icon
                       icon={socialIcons[social.name] ?? "mdi:link-variant"}
@@ -77,7 +77,7 @@ const Contact = () => {
           </div>
         </div>
       </div>
-      <Marquee items={items} className="text-white bg-transparent" />
+      <Marquee items={items} className="text-ink bg-transparent" />
     </section>
   );
 };

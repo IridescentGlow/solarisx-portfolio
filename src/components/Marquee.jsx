@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 gsap.registerPlugin(Observer);
 const Marquee = ({
   items,
-  className = "text-white bg-[var(--color-bg-base)]",
+  className = "text-ink bg-[var(--color-bg-base)]",
   icon = "mdi:star-four-points",
   iconClassName = "",
   reverse = false,

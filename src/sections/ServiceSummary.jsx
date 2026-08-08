@@ -64,7 +64,7 @@ const ServiceSummary = () => {
         className="flex items-center justify-center gap-3 translate-x-16"
       >
         <p className="font-normal">Motion</p>
-        <div className="w-10 h-1 md:w-32 bg-gold" />
+        <div className="w-10 h-1 md:w-32 bg-accent" />
         <p>Design</p>
       </div>
       <div
@@ -72,9 +72,9 @@ const ServiceSummary = () => {
         className="flex items-center justify-center gap-3 -translate-x-48"
       >
         <p>Pacing</p>
-        <div className="w-10 h-1 md:w-32 bg-gold" />
+        <div className="w-10 h-1 md:w-32 bg-accent" />
         <p className="italic">Composition</p>
-        <div className="w-10 h-1 md:w-32 bg-gold" />
+        <div className="w-10 h-1 md:w-32 bg-accent" />
         <p>Rhythm</p>
       </div>
       <div id="title-service-4" className="translate-x-48">

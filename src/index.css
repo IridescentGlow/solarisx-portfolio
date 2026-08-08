@@ -146,6 +146,13 @@
   --color-surface-2: #1d1a17;
   --color-surface-3: #262220;
   --color-border: #332e29;
+  /* Foreground "ink". Registering it in the --color-* namespace makes
+     Tailwind generate text-ink / bg-ink / border-ink with working
+     opacity modifiers, so the whole existing white-opacity ladder
+     (text-white/30, bg-white/30, border-white/30 …) becomes a single
+     themeable token instead of ~50 hardcoded whites that would each
+     have to be special-cased per theme. */
+  --color-ink: #ffffff;
   --color-text-primary: #ffffff;
   --color-text-secondary: rgba(255, 255, 255, 0.72);
   --color-text-tertiary: rgba(255, 255, 255, 0.48);
@@ -229,9 +236,70 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+  /* Hover-lift depth for media cards. Tokenised so light mode can use a
+     warm, far shallower shadow — dark-theme depth reads as dirt on paper. */
+  --shadow-lift: 0 28px 72px rgba(0, 0, 0, 0.75);
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 16px;
+}
+
+/* ------------------------------------------------------------------ */
+/* THEME LAYER                                                        */
+/*                                                                    */
+/* Dark is the baseline: every value above is the dark theme, and     */
+/* nothing about it changes here. Light is expressed only as an       */
+/* override of the same semantic tokens, so both themes are two       */
+/* lightings of one design system rather than two designs.            */
+/*                                                                    */
+/* The palette is warm on both sides. Dark is a warm near-black       */
+/* (#0b0a09), so light is warm paper — not #ffffff, which would read  */
+/* as a generic product site rather than as this portfolio.           */
+/*                                                                    */
+/* Elevation inverts direction deliberately: in dark, panels sit      */
+/* LIGHTER than the page; in light they sit DARKER. What the          */
+/* composition actually depends on is that a chapter panel reads as a */
+/* different material from the page, and the contrast delta is        */
+/* preserved even though its sign flips.                              */
+/* ------------------------------------------------------------------ */
+:root[data-theme="light"] {
+  /* Deepened from the original #f4f1eb: at L~94% that value read as a
+     generic white website rather than warm paper. Every step of the
+     ladder below is shifted by the same ~2.6% lightness delta (hue/
+     saturation held close to the original), so the ladder's own spacing
+     — and therefore the surfaces/cards/borders material hierarchy — is
+     preserved rather than re-tuned per token. */
+  --color-bg-base: #efebe2;
+  --color-surface-1: #e5dfd3;
+  --color-surface-2: #dcd5c7;
+  --color-surface-3: #d2c9ba;
+  --color-border: #c6bcab;
+
+  /* Foreground flips to a warm near-black that mirrors the dark
+     theme's own background, which is what keeps the two feeling like
+     the same material inverted rather than two unrelated palettes. */
+  --color-ink: #14110f;
+  --color-text-primary: #14110f;
+  --color-text-secondary: rgba(20, 17, 15, 0.74);
+  --color-text-tertiary: rgba(20, 17, 15, 0.52);
+
+  /* Same hue, darker value. #cfa355 only reaches ~2:1 against warm
+     paper, which fails for text and for the thin accent rules; this
+     keeps the gold recognisably the same accent while making it
+     legible. The dark theme's accent is untouched. */
+  --color-accent: #96701f;
+  --color-accent-dim: #7d5c17;
+  --color-accent-subtle: rgba(150, 112, 31, 0.14);
+  --color-gold: #96701f;
+
+  --color-state-error: #a33f2f;
+
+  /* Shadows carry warmth and far less opacity on paper — dark-theme
+     depths (0.4–0.75 black) read as dirt on a light surface. */
+  --shadow-sm: 0 1px 2px rgba(58, 48, 36, 0.08);
+  --shadow-md: 0 4px 16px rgba(58, 48, 36, 0.1);
+  --shadow-lg: 0 16px 48px rgba(58, 48, 36, 0.14);
+  --shadow-lift: 0 28px 72px rgba(58, 48, 36, 0.2);
 }
 
 body {
@@ -240,6 +308,50 @@ body {
   scroll-behavior: smooth;
   overflow-x: hidden;
   font-family: var(--font-amiamie);
+}
+
+/* Theme crossfade. Scoped to the properties that actually carry the theme,
+   not `transition: all` — a global all-transition would fight every GSAP
+   hover and reveal on the site, since those animate transform and opacity.
+   Transform and opacity are deliberately excluded here for that reason.
+   340ms lands between the site's --duration-transition and --duration-reveal:
+   fast enough to feel responsive, slow enough to read as deliberate rather
+   than as a flash.
+
+   Two things had to be fixed together here, not one:
+
+   1. Layer. Tailwind v4 declares `@layer theme, base, components,
+      utilities;` up front and emits every utility class (transition-all,
+      duration-700, group-hover:*, arbitrary-property transitions, all of
+      it) into `@layer utilities`. This rule used to be plain unlayered
+      CSS, and per the CSS Cascade Layers spec, unlayered rules always
+      beat ANY layered rule regardless of specificity — so it won outright
+      no matter how it was written. Reusing the same `utilities` layer
+      name here (not inventing a new one — a new layer name would just
+      become the highest-priority layer instead, recreating the same bug)
+      puts this rule back into the normal specificity-based cascade
+      against Tailwind's own classes.
+   2. Specificity, now that it's a fair fight. The `transition` shorthand
+      sets transition-property/duration/timing-function as one atomic
+      value per element — whichever declaration wins, wins the whole list,
+      it doesn't merge per-property. :where() zeroes this selector's
+      specificity so a component's own transition-* utility class (0,1,0)
+      always wins in full for the element it's on, instead of this rule's
+      fixed 5-property list silently replacing whatever the component
+      declared (which is what had been dropping transform/opacity/padding
+      from hover transitions, turning them into single-frame jumps). Plain
+      elements with no such class have nothing to lose to, so they still
+      fall back to this rule. */
+@layer utilities {
+  @media (prefers-reduced-motion: no-preference) {
+    :where(:root:not(.theme-init) body, :root:not(.theme-init) body *:not(svg):not(path)) {
+      transition: background-color 340ms var(--ease-connective),
+        border-color 340ms var(--ease-connective),
+        color 340ms var(--ease-connective),
+        fill 340ms var(--ease-connective),
+        box-shadow 340ms var(--ease-connective);
+    }
+  }
 }
 
 @utility clip-path {
@@ -297,7 +409,7 @@ body {
   border-radius: 9999px;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.8) 0%,
+    color-mix(in srgb, var(--color-ink) 80%, transparent) 0%,
     color-mix(in srgb, var(--color-accent) 40%, transparent) 40%,
     transparent 75%
   );

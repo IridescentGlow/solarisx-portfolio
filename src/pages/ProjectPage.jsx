@@ -8,6 +8,7 @@ import { projects } from "../constants";
 import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
 import { AnimatedTextLines } from "../components/AnimatedTextLines";
 import Marquee from "../components/Marquee";
+import ThemeToggle from "../components/ThemeToggle";
 import { isVideo } from "../lib/media";
 import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 
@@ -43,7 +44,7 @@ import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 const GALLERY_CARD =
   "group overflow-hidden rounded-lg border border-[var(--color-border)] shadow-lg " +
   "transition-[border-color,box-shadow,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] " +
-  "hover:-translate-y-1.5 hover:border-[var(--color-accent)] hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)] " +
+  "hover:-translate-y-1.5 hover:border-[var(--color-accent)] hover:shadow-[var(--shadow-lift)] " +
   "focus-within:-translate-y-1.5 focus-within:border-[var(--color-accent)]";
 const GALLERY_IMG =
   "object-cover w-full h-full transition-transform duration-[1200ms] " +
@@ -396,14 +397,14 @@ const ProjectPage = () => {
 
   if (!project) {
     return (
-      <main className="flex flex-col items-center justify-center min-h-screen gap-6 px-10 text-center text-white bg-[var(--color-bg-base)]">
+      <main className="flex flex-col items-center justify-center min-h-screen gap-6 px-10 text-center text-ink bg-[var(--color-bg-base)]">
         <p className="text-sm tracking-widest uppercase text-[var(--color-text-tertiary)]">
           404
         </p>
         <h1 className="text-3xl font-light">Project not found</h1>
         <Link
           to="/"
-          className="text-sm uppercase tracking-widest text-[var(--color-accent)] transition-colors hover:text-white"
+          className="text-sm uppercase tracking-widest text-[var(--color-accent)] transition-colors hover:text-ink"
         >
           Back to Works
         </Link>
@@ -426,13 +427,15 @@ const ProjectPage = () => {
     // descendant — the chapter stack below would just never pin. `clip`
     // gives the same horizontal-overflow protection without establishing a
     // scroll container, so sticky keeps working.
-    <main className="min-h-screen overflow-x-clip text-white bg-[var(--color-bg-base)]">
+    <main className="min-h-screen overflow-x-clip text-ink bg-[var(--color-bg-base)]">
+
       {/* §2: the origin tab is never lost (new-tab rule), so this is only
           for visitors who arrive directly — optional, not primary nav. */}
+      <ThemeToggle className="top-4 right-10" />
       <div className="px-10 pt-10">
         <Link
           to="/"
-          className="inline-block text-sm uppercase tracking-widest text-[var(--color-text-tertiary)] transition-colors hover:text-white"
+          className="inline-block text-sm uppercase tracking-widest text-[var(--color-text-tertiary)] transition-colors hover:text-ink"
         >
           ← Back to Works
         </Link>
@@ -445,7 +448,7 @@ const ProjectPage = () => {
         subTitle="Case Study"
         title={titleMain}
         text={titleQualifier || ""}
-        textColor="text-white"
+        textColor="text-ink"
         withScrollTrigger={false}
         // The qualifier ("Award Winning Solution") is a highlighted
         // achievement, not routine header copy — see the gold-shimmer-text
@@ -543,7 +546,7 @@ const ProjectPage = () => {
         {cs?.challenge && (
           <section
             className={`${stackClass} ${chapterGap} bg-[var(--color-bg-base)] ${
-              canStack ? "border-t-2 border-white/30 pb-12" : ""
+              canStack ? "border-t-2 border-ink/30 pb-12" : ""
             }`}
             style={stackStyle(0)}
           >
@@ -551,7 +554,7 @@ const ProjectPage = () => {
               subTitle="01 — The Problem"
               title="Challenge"
               text=""
-              textColor="text-white"
+              textColor="text-ink"
               withScrollTrigger={true}
               compact
             />
@@ -559,7 +562,7 @@ const ProjectPage = () => {
               <div className="flex justify-end">
                 <AnimatedTextLines
                   text={cs.challenge.text}
-                  className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
+                  className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-ink space-y-4 text-2xl md:text-3xl text-pretty"
                 />
               </div>
             </div>
@@ -580,7 +583,7 @@ const ProjectPage = () => {
         {cs?.approach && (
           <section
             className={`${stackClass} ${chapterGap} bg-[var(--color-bg-base)] ${
-              canStack ? "border-t-2 border-white/30 pb-12" : ""
+              canStack ? "border-t-2 border-ink/30 pb-12" : ""
             }`}
             style={stackStyle(1)}
           >
@@ -588,7 +591,7 @@ const ProjectPage = () => {
               subTitle="02 — The Process"
               title="Approach"
               text=""
-              textColor="text-white"
+              textColor="text-ink"
               withScrollTrigger={true}
               compact
             />
@@ -604,7 +607,7 @@ const ProjectPage = () => {
                 interactive object even though nothing on it links
                 anywhere. */}
             {cs.approach.challenges && (
-              <div className="h-fit p-8 transition-all duration-700 border rounded-lg shadow-lg bg-[var(--color-surface-2)] border-[var(--color-border)] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:-translate-y-1 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
+              <div className="h-fit p-8 transition-all duration-700 border rounded-lg shadow-lg bg-[var(--color-surface-2)] border-[var(--color-border)] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[var(--color-accent)] hover:-translate-y-1 hover:shadow-[var(--shadow-lift)]">
                 <div className="flex items-center justify-center rounded-full size-12 bg-[var(--color-accent-subtle)]">
                   <Icon
                     icon="mdi:alert-circle-outline"
@@ -651,7 +654,7 @@ const ProjectPage = () => {
               subTitle="03 — What Was Made"
               title="Craft"
               text=""
-              textColor="text-white"
+              textColor="text-ink"
               withScrollTrigger={true}
               compact
             />
@@ -666,7 +669,7 @@ const ProjectPage = () => {
                 <div>
                   <h3
                     ref={pushHeadingRef}
-                    className="text-sm tracking-[0.2em] uppercase text-white/30"
+                    className="text-sm tracking-[0.2em] uppercase text-ink/30"
                   >
                     My Role
                   </h3>
@@ -731,7 +734,7 @@ const ProjectPage = () => {
                     />
                   </div>
                   <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
-                    <span className="text-white/30">01</span>
+                    <span className="text-ink/30">01</span>
                     {cs.craft.gallery[0].caption}
                   </figcaption>
                 </figure>
@@ -774,14 +777,14 @@ const ProjectPage = () => {
                           />
                         </div>
                         <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
-                          <span className="text-white/30">0{index + 1}</span>
+                          <span className="text-ink/30">0{index + 1}</span>
                           {item.caption}
                         </figcaption>
                       </figure>
                     );
                   })}
                 </div>
-                <p className="px-10 mt-3 text-xs tracking-wider uppercase text-white/30">
+                <p className="px-10 mt-3 text-xs tracking-wider uppercase text-ink/30">
                   Scroll or swipe →
                 </p>
               </div>
@@ -812,7 +815,7 @@ const ProjectPage = () => {
             subTitle="04 — The Outcome"
             title="Result"
             text=""
-            textColor="text-white"
+            textColor="text-ink"
             withScrollTrigger={true}
             compact
           />
@@ -820,7 +823,7 @@ const ProjectPage = () => {
             <div className="flex justify-end">
               <AnimatedTextLines
                 text={cs.result.text}
-                className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-white space-y-4 text-2xl md:text-3xl text-pretty"
+                className="statement-drift max-w-2xl font-light leading-snug tracking-wide text-right text-ink space-y-4 text-2xl md:text-3xl text-pretty"
               />
             </div>
           </div>
@@ -871,7 +874,7 @@ const ProjectPage = () => {
                     content. */}
                 <h3
                   ref={pushHeadingRef}
-                  className="mt-6 font-light leading-none tracking-wide text-white uppercase contact-text-responsive"
+                  className="mt-6 font-light leading-none tracking-wide text-ink uppercase contact-text-responsive"
                 >
                   First Place
                 </h3>
@@ -895,7 +898,7 @@ const ProjectPage = () => {
                     single-column-text state this page has no other
                     precedent for. */}
                 <div className="flex flex-col items-center justify-center max-w-5xl gap-10 mx-auto mt-14 md:flex-row md:gap-6">
-                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow] border rounded-lg shadow-lg -rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:rotate-0 hover:-translate-y-2 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
+                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow,border-color] border rounded-lg shadow-lg -rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:rotate-0 hover:-translate-y-2 hover:shadow-[var(--shadow-lift)]">
                     <img
                       src={cs.result.award.certificate}
                       alt="AASTU Tech Fest 2025 Hackathon — First Place Winner's Prize certificate, awarded to MediHelp Plus"
@@ -903,7 +906,7 @@ const ProjectPage = () => {
                       className="object-cover w-full aspect-video"
                     />
                   </div>
-                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow] border rounded-lg shadow-lg rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:-mt-6 hover:rotate-0 hover:-translate-y-2 hover:shadow-[0_28px_72px_rgba(0,0,0,0.75)]">
+                  <div className="w-full md:w-[480px] overflow-hidden transition-[transform,box-shadow,border-color] border rounded-lg shadow-lg rotate-2 border-[var(--color-border)] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:-mt-6 hover:rotate-0 hover:-translate-y-2 hover:shadow-[var(--shadow-lift)]">
                     <img
                       src={cs.result.award.ceremony}
                       alt="MediHelp team at the AASTU Tech Fest 2025 award ceremony"
@@ -937,7 +940,7 @@ const ProjectPage = () => {
                     "First Place",
                     "AASTU Tech Fest 2025",
                   ]}
-                  className="text-white/40 bg-transparent border-y border-[var(--color-border)]"
+                  className="text-ink/40 bg-transparent border-y border-[var(--color-border)]"
                 />
               </div>
             </div>
@@ -956,11 +959,11 @@ const ProjectPage = () => {
         <section className="px-10 mt-32 md:mt-40">
           <h2
             ref={pushHeadingRef}
-            className="text-xl font-light tracking-wide text-white uppercase md:text-2xl"
+            className="text-xl font-light tracking-wide text-ink uppercase md:text-2xl"
           >
             Credits
           </h2>
-          <div className="w-full h-px mt-4 bg-white/30" />
+          <div className="w-full h-px mt-4 bg-ink/30" />
           <AnimatedTextLines
             text={cs.credits.text}
             className="max-w-2xl mt-6 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
@@ -985,7 +988,7 @@ const ProjectPage = () => {
             href={project.liveHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 text-[var(--color-accent)] transition-colors hover:text-white"
+            className="inline-flex items-center gap-3 text-[var(--color-accent)] transition-colors hover:text-ink"
           >
             {/* MediHelp's own brand favicon (distinct mark from logo.png —
                 see the case study's Media section) — a small, functional
@@ -1007,7 +1010,7 @@ const ProjectPage = () => {
             href={project.repoHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[var(--color-accent)] transition-colors hover:text-white"
+            className="text-[var(--color-accent)] transition-colors hover:text-ink"
           >
             Code ↗
           </a>

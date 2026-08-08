@@ -201,7 +201,7 @@ const Works = () => {
         subTitle={"Evidence before claims"}
         title={"Works"}
         text={text}
-        textColor={"text-white"}
+        textColor={"text-ink"}
         withScrollTrigger={true}
       />
       <div
@@ -263,7 +263,7 @@ const Works = () => {
                 z-[1] keeps the text above the click-burst layer (z-0). */}
             {(() => {
               const titleClassName =
-                "relative z-[1] flex items-start justify-between gap-6 px-10 text-white transition-all duration-500 md:group-hover:px-12 md:group-hover:text-white";
+                "relative z-[1] flex items-start justify-between gap-6 px-10 text-ink transition-all duration-500 md:group-hover:px-12 md:group-hover:text-ink";
               const titleContent = (
                 <>
                   <h2 className="lg:text-[32px] text-[26px] leading-none">
@@ -274,7 +274,7 @@ const Works = () => {
                     <span className="hidden sm:inline">{project.year}</span>
                     <Icon
                       icon="lucide:arrow-up-right"
-                      className="text-white md:size-6 size-5"
+                      className="text-ink md:size-6 size-5"
                     />
                   </div>
                 </>
@@ -317,7 +317,7 @@ const Works = () => {
               {project.stack.map((tech) => (
                 <p
                   key={tech}
-                  className="text-white transition-colors duration-500 md:group-hover:text-white"
+                  className="text-ink transition-colors duration-500 md:group-hover:text-ink"
                 >
                   {tech}
                 </p>

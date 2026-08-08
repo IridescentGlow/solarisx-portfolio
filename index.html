@@ -42,6 +42,30 @@
     />
     <!-- TODO(content): add twitter:image (same asset as og:image). Without it
          this card renders as a small summary rather than large image. -->
+    <!-- Theme, resolved before first paint. This has to be inline and
+         blocking: anything that waits for the JS bundle paints the default
+         theme first, and a light-mode visitor sees a full-screen black
+         flash. Mirrors resolveTheme()/applyTheme() in src/lib/theme.js —
+         that module cannot be imported here for the same reason. -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("solarisx-theme");
+          var theme =
+            saved === "light" || saved === "dark"
+              ? saved
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+          document.documentElement.style.colorScheme = theme;
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute("content", theme === "light" ? "#efebe2" : "#0b0a09");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -45,14 +45,14 @@ const ContactSummary = () => {
             “ Let’s make something <br />
             <span className="font-normal">memorable</span> &{" "}
             <span className="italic">inspiring</span> <br />
-            <span className="text-gold">together</span> “
+            <span className="text-accent">together</span> “
           </p>
         </div>
         <Marquee
           items={items2}
           reverse={true}
-          className="text-white bg-transparent border-y-2"
-          iconClassName="stroke-gold stroke-2 text-primary"
+          className="text-ink bg-transparent border-y-2"
+          iconClassName="stroke-accent stroke-2 text-ink"
           icon="material-symbols-light:square"
         />
       </section>

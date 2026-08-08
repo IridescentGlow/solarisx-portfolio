@@ -32,14 +32,14 @@ const Services = () => {
         subTitle={"Behind the scene, Beyond the screen"}
         title={"Capabilities"}
         text={text}
-        textColor={"text-white"}
+        textColor={"text-ink"}
         withScrollTrigger={true}
       />
       {servicesData.map((service, index) => (
         <div
           ref={(el) => (serviceRefs.current[index] = el)}
           key={index}
-          className="sticky px-10 pt-6 pb-12 text-white bg-[var(--color-surface-1)] border-t-2 border-white/30"
+          className="sticky px-10 pt-6 pb-12 text-ink bg-[var(--color-surface-1)] border-t-2 border-ink/30"
           style={
             isDesktop
               ? {
@@ -52,14 +52,14 @@ const Services = () => {
           <div className="flex items-center justify-between gap-4 font-light">
             <div className="flex flex-col gap-6">
               <h2 className="text-4xl lg:text-5xl">{service.title}</h2>
-              <p className="text-xl leading-relaxed tracking-widest lg:text-2xl text-white/60 text-pretty">
+              <p className="text-xl leading-relaxed tracking-widest lg:text-2xl text-ink/60 text-pretty">
                 {service.description}
               </p>
-              <div className="flex flex-col gap-2 text-xl sm:gap-4 lg:text-2xl text-white/80">
+              <div className="flex flex-col gap-2 text-xl sm:gap-4 lg:text-2xl text-ink/80">
                 {service.items.map((item, itemIndex) => (
                   <div key={`item-${index}-${itemIndex}`}>
                     <h3 className="flex">
-                      <span className="mr-12 text-lg text-white/30">
+                      <span className="mr-12 text-lg text-ink/30">
                         0{itemIndex + 1}
                       </span>
                       {item.title}
@@ -68,7 +68,7 @@ const Services = () => {
                       {item.description}
                     </p>
                     {itemIndex < service.items.length - 1 && (
-                      <div className="w-full h-px my-2 bg-white/30" />
+                      <div className="w-full h-px my-2 bg-ink/30" />
                     )}
                   </div>
                 ))}

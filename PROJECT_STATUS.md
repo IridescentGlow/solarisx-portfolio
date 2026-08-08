@@ -92,8 +92,237 @@ placeholders.
 
 ## Changelog
 
-## Milestone — Final Creative Direction: Moments and Pacing
+### Milestone — Theme Polish: Crossfade Regression Fix + Deepened Cream Palette
 *(this milestone)*
+
+Two known issues left open by the previous theme milestone: hover
+animations had visually degraded since the theme system landed, and light
+mode read as too bright. Root-caused the first rather than patching
+symptoms; the second was a token-value adjustment.
+
+**Animation regression — actual root cause, found empirically**
+
+The reported symptom (hover motion "jumping to the final state," losing
+easing) turned out to be a real bug in the theme crossfade rule added by
+the previous milestone, not a perception issue. Confirmed with
+`getComputedStyle()` in a real headless-Chromium session before touching
+any code (a temporary `playwright-core` install pointed at this
+environment's cached Chromium build, driving `npm run dev`; not added to
+the project's own dependencies): Works.jsx's trophy icon
+(`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]`), which
+should transition `opacity`/`scale`/everything over 700ms, was actually
+computing `transition-property: background-color, border-color, color,
+fill, box-shadow` at `340ms` with `ease-connective` — the crossfade
+rule's own fixed values, entirely replacing the component's, with
+`transform` and `opacity` dropped from the list outright. That is exactly
+"jumps to the final state": with `transform`/`opacity` absent from the
+transition-property list, those changes apply with zero transition at
+all.
+
+Two independent CSS mechanisms compounded, and both had to be fixed
+together (confirmed one at a time — fixing only the first left the bug
+unchanged):
+
+1. **Cascade layers.** Tailwind v4 declares
+   `@layer theme, base, components, utilities;` up front and emits every
+   utility class (`transition-all`, `duration-700`, `group-hover:*`,
+   arbitrary-property transitions) into `@layer utilities`. The crossfade
+   rule was plain unlayered CSS — and per the CSS Cascade Layers spec,
+   *unlayered rules always beat layered rules regardless of specificity*.
+   No selector change could have fixed this alone; the rule had to move
+   into `@layer utilities` (reusing Tailwind's own already-declared layer
+   name, not inventing a new one — a new layer name would simply become
+   the highest-priority layer and reproduce the same bug from the other
+   direction).
+2. **Specificity, once it was a fair fight.** The `transition` shorthand
+   sets `transition-property`/`duration`/`timing-function` as one atomic
+   value per element — whichever declaration wins for that longhand wins
+   the whole list, values don't merge property-by-property across rules.
+   The crossfade selector (`:root:not(.theme-init) body *:not(svg):not(path)`)
+   was more specific than any single Tailwind utility class, so once it
+   was competing fairly inside `@layer utilities` it would still have won
+   outright. Wrapped the whole selector in `:where()` to zero its
+   specificity, so a component's own `transition-*` class always wins in
+   full for the element it's on; plain elements with no such class have
+   nothing to lose to and still fall back to the crossfade correctly.
+
+**Consequence found and fixed, not left as a side effect**
+
+Zeroing the crossfade's specificity means an element's own transition
+declaration now wins *entirely*, including for properties it doesn't
+list. Audited every arbitrary-property `transition-[...]` list in the
+codebase (`grep -rn "transition-\["`) for gaps against what's actually
+themed on that element. Two of three were already complete;
+`ProjectPage.jsx`'s two floating award cards
+(`transition-[transform,box-shadow]`) were missing `border-color` despite
+having `border-[var(--color-border)]` — added it to both, verified with
+the same computed-style check.
+
+**Verified in the browser, not from source reading**
+
+- Direct `getComputedStyle()` before/after on Works.jsx's trophy icon and
+  row header, ThemeToggle, Navbar link, ProjectPage's gallery cards and
+  both award cards — every one now reports its own component-declared
+  `transition-property`/`duration`/`timing-function` in full, not the
+  crossfade's fixed list. Re-confirmed against the actual `npm run build`
+  + `npm run preview` production bundle, not just the dev server.
+- Forced `:hover` via a raw CDP session (`CSS.forcePseudoState`) on the
+  trophy's row and sampled computed `opacity` over time: transitions
+  0→1 on hover-in and 1→0 on hover-out, confirming the mechanism
+  functions end-to-end (this sandbox's headless Chromium throttles
+  `requestAnimationFrame` too coarsely to also capture the interpolation
+  curve frame-by-frame; the direct computed-transition-property check
+  above is the rigorous evidence, this corroborates it).
+- Zero horizontal overflow and zero console/page errors across every
+  combination of 2 routes (`/`, `/projects/medihelp`) × 2 themes × 5
+  widths (390/700/820/1024/1440) — 20 checks, all clean.
+- Theme toggle verified functionally: toggling flips `data-theme` and
+  `body` background correctly, survives a real page reload, carries
+  across a route navigation to `/projects/medihelp` and back, and
+  toggling again on the project page carries back to home correctly. No
+  page errors at any step.
+- Screenshotted every requested section in both themes on Home (Hero,
+  Works, About, ServiceSummary, Services, ContactSummary, Contact) and
+  MediHelp (Overview, Challenge/Approach, Craft gallery, Award) —
+  dark mode is pixel-identical to before this milestone (only the
+  crossfade mechanics changed, no dark-theme token was touched); light
+  mode reads as intentional warm paper at every section, with the
+  material hierarchy (page vs. raised panel vs. card vs. border) clearly
+  legible.
+
+**Light mode — deepened, not re-architected**
+
+`#f4f1eb` (L≈94%) still read as close to a generic white site. Pulled
+the whole light ladder down by the same ~2.6% lightness delta (hue/
+saturation held close to the original) so the ladder's own spacing is
+preserved rather than re-tuned token-by-token:
+`--color-bg-base` `#f4f1eb → #efebe2`, `--color-surface-1` `#eae5dc →
+#e5dfd3`, `--color-surface-2` `#e1dbd0 → #dcd5c7`, `--color-surface-3`
+`#d7cfc2 → #d2c9ba`, `--color-border` `#cbc2b3 → #c6bcab`. Ink, text, and
+accent tokens deliberately untouched — the accent was already
+contrast-fitted against the old, brighter background, so darkening the
+page only improves that margin (checked: ink 15.81:1, accent 3.81:1 on
+the new background, both above the old ratios). Synced the new hex into
+the two places it was hardcoded outside `index.css` —
+`index.html`'s inline pre-paint script and `theme.js`'s `applyTheme()` —
+so the browser's `theme-color` chrome doesn't desync from the page.
+
+**Build/lint**
+
+`npm run build` and `npm run lint` both pass clean, including a direct
+check that the built CSS retains the `:where()` selector and `@layer
+utilities` wrapper (not just the dev-server source).
+
+**Deliberate limitations**
+
+- The `.theme-init` class referenced in the crossfade selector
+  (`:root:not(.theme-init)`) is dead code — nothing in the codebase ever
+  sets it, on `<html>` or anywhere else (confirmed by grepping
+  `src/main.jsx`/`src/App.jsx` in addition to the rest of `src/` and
+  `index.html`). Left untouched: fixing it is a separate judgment call
+  about suppressing the crossfade specifically during the very first
+  paint (its likely original intent), which would need new JS wiring to
+  set and clear the class, and isn't required by either reported bug.
+  Flagging it here as a latent gap rather than silently leaving it
+  unexplained.
+- No new design tokens, no new easing curves, no changes to any
+  dark-theme value, no changes to typography/spacing/composition — this
+  milestone touched only the crossfade mechanism and the light
+  background/surface/border ladder.
+
+**Files touched**: `src/index.css` (crossfade rule + light palette),
+`index.html` (theme-color meta sync), `src/lib/theme.js` (theme-color
+meta sync), `src/pages/ProjectPage.jsx` (two `transition-[...]` lists
+completed). No new dependencies added to the project — verification used
+a temporary, unsaved `playwright-core` install in the scratch directory
+only.
+
+### Milestone — Dark/Light Theme System
+
+One design language in two lightings, not two designs. Dark is the
+baseline and is visually unchanged; light is expressed purely as an
+override of the same semantic tokens.
+
+**What the audit found first**
+
+No theme logic existed anywhere (no `prefers-color-scheme`, no
+`localStorage`, no `data-theme`, no Tailwind config — v4 CSS-first). The
+design system was already semantic CSS variables in `index.css`, so the
+real work was the 67 hardcoded, theme-coupled colours across 11
+components that bypassed those variables — mostly a `text-white/30|60|80`
+opacity ladder that would have inverted into invisibility on a light page.
+
+**Architecture — one token, not a second system**
+
+The ladder is now a single `--color-ink` foreground token registered in
+the `--color-*` namespace, which makes Tailwind generate
+`text-ink` / `bg-ink` / `border-ink` with working opacity modifiers.
+Verified in the built CSS that these compile to runtime-switchable values
+(`.text-ink{color:var(--color-ink)}` and
+`color-mix(in oklab,var(--color-ink)30%,transparent)`) before building
+anything on top of it. That turned ~50 special-cases into one variable.
+`white`→`ink` and `gold`→`accent` migrations covered 62 occurrences; the
+remaining five were a legacy icon fill, four hardcoded lift shadows, and
+the click-burst flash core (a white core is invisible on paper).
+
+**Light palette decisions**
+
+- Warm paper `#f4f1eb`, not `#ffffff` — the dark theme is a warm
+  near-black, so pure white would read as a generic product site.
+- Elevation inverts direction deliberately: panels sit *lighter* than the
+  page in dark and *darker* in light. What the composition depends on is
+  that a chapter panel reads as different material; the contrast delta is
+  preserved even though its sign flips.
+- Accent keeps its hue but darkens to `#96701f`. `#cfa355` only reaches
+  ~2:1 on paper, which fails for text and the thin accent rules. The dark
+  theme's accent is untouched.
+- Shadows become warm and far shallower — dark-theme depth reads as dirt
+  on a light surface.
+
+**Initialization, persistence, transition**
+
+Resolution is an inline blocking script in `index.html`: explicit choice
+wins, otherwise the OS preference. It must be inline — anything waiting
+for the bundle paints the default first and a light-mode visitor sees a
+full-screen black flash. `src/lib/theme.js` mirrors it for runtime use;
+no library was added. The toggle borrows the burger's exact language
+(same circle, same `--color-surface-2`, same fixed corner) one size
+smaller so it stays subordinate, with both icons always mounted and
+cross-faded so there is no layout shift. The theme crossfade is scoped to
+colour/background/border/fill/shadow only — a global `transition: all`
+would fight every GSAP hover and reveal, since those animate transform
+and opacity.
+
+**Verified in the browser, not from the code**
+
+- No flash: under a system-light context, `body` background is
+  `rgb(244,241,235)` at first paint.
+- Resolution: system dark → dark, system light → light; toggle persists
+  across reload *and* across route navigation; no page errors.
+- Toggle measured in both themes — icons swap, `aria-label` flips, icon
+  contrast is high against the button surface.
+- Responsive: 390 / 700 / 820 / 1024 / 1440 in **both** themes — zero
+  horizontal overflow, zero clipping, zero errors, toggle present at every
+  width, and stack behaviour identical between themes, confirming the
+  theme layer does not touch layout.
+- Rendered and compared: MediHelp top / Challenge / gallery / Award, and
+  Home's hero. The 3D hero canvas is transparent so it inherits the page
+  and needed no change. Gallery cards stay defined by caption strip and
+  shadow rather than heavy outlines, preserving the "surfaces, not boxed
+  cards" language. Award marquee stays continuous with no dead gaps.
+- `npm run build` and `npm run lint` pass.
+
+**Deliberate limitations**
+
+- Only MediHelp and Home's hero were visually reviewed at length. Home's
+  About / ServiceSummary / Capabilities / ContactSummary / Contact and the
+  Works listing were verified structurally (tokenised, no overflow, no
+  errors) but not yet eyeballed section by section in light mode. That
+  review is the recommended next step.
+- Typography, scale, composition, spacing and motion are untouched by
+  design — the theme layer changes colour only.
+
+### Milestone — Final Creative Direction: Moments and Pacing
 
 An art-direction pass, not an implementation one. Started by studying the
 home page as an experience — reading `ServiceSummary.jsx` and

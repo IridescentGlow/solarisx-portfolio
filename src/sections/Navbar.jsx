@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { Link } from "react-scroll";
+import ThemeToggle from "../components/ThemeToggle";
 
 const Navbar = () => {
   const navRef = useRef(null);
@@ -100,14 +101,14 @@ const Navbar = () => {
     <>
       <nav
         ref={navRef}
-        className="fixed z-50 flex flex-col justify-between w-full h-full px-10 uppercase bg-[var(--color-surface-2)] text-white/80 py-28 gap-y-10 md:w-1/2 md:left-1/2"
+        className="fixed z-50 flex flex-col justify-between w-full h-full px-10 uppercase bg-[var(--color-surface-2)] text-ink/80 py-28 gap-y-10 md:w-1/2 md:left-1/2"
       >
         <div className="flex flex-col text-5xl gap-y-2 md:text-6xl lg:text-8xl">
           {["home", "work", "about", "capabilities", "contact"].map(
             (section, index) => (
               <div key={index} ref={(el) => (linksRef.current[index] = el)}>
                 <Link
-                  className="transition-all duration-300 cursor-pointer hover:text-white"
+                  className="transition-all duration-300 cursor-pointer hover:text-ink"
                   to={`${section}`}
                   smooth
                   offset={0}
@@ -124,13 +125,13 @@ const Navbar = () => {
           className="flex flex-col flex-wrap justify-between gap-8 md:flex-row"
         >
           <div className="font-light">
-            <p className="tracking-wider text-white/50">E-mail</p>
+            <p className="tracking-wider text-ink/50">E-mail</p>
             <p className="text-xl tracking-widest lowercase text-pretty">
               contactphazotron@gmail.com
             </p>
           </div>
           <div className="font-light">
-            <p className="tracking-wider text-white/50">Social Media</p>
+            <p className="tracking-wider text-ink/50">Social Media</p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               {socials.map((social, index) => (
                 <a
@@ -140,7 +141,7 @@ const Navbar = () => {
                   rel="noopener noreferrer"
                   aria-label={social.name}
                   title={social.name}
-                  className="transition-colors duration-300 hover:text-white"
+                  className="transition-colors duration-300 hover:text-ink"
                 >
                   <Icon
                     icon={socialIcons[social.name] ?? "mdi:link-variant"}
@@ -152,6 +153,9 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
+      {/* Left of the burger: the burger owns the corner, and this stays
+          clear of it at both sizes (burger 3.5rem/5rem + 2.5rem inset). */}
+      <ThemeToggle className="top-[0.9rem] right-[7rem] md:top-7 md:right-[9rem]" />
       <div
         className="fixed z-50 flex flex-col items-center justify-center gap-1 transition-all duration-300 bg-[var(--color-surface-2)] rounded-full cursor-pointer w-14 h-14 md:w-20 md:h-20 top-4 right-10"
         onClick={toggleMenu}
@@ -163,11 +167,11 @@ const Navbar = () => {
       >
         <span
           ref={topLineRef}
-          className="block w-8 h-0.5 bg-white rounded-full origin-center"
+          className="block w-8 h-0.5 bg-ink rounded-full origin-center"
         ></span>
         <span
           ref={bottomLineRef}
-          className="block w-8 h-0.5 bg-white rounded-full origin-center"
+          className="block w-8 h-0.5 bg-ink rounded-full origin-center"
         ></span>
       </div>
     </>

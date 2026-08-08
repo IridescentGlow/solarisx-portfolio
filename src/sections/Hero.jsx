@@ -14,7 +14,7 @@ experiences people remember`;
         subTitle={"Visual Storyteller · Creative Technologist"}
         title={"Dagim Demissie"}
         text={text}
-        textColor={"text-white"}
+        textColor={"text-ink"}
       />
       <figure
         className="absolute inset-0 -z-50"
