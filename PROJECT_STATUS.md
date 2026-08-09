@@ -32,7 +32,7 @@ src/
     HomePage.jsx           → the single-page narrative (former App.jsx body, unchanged)
     ProjectPage.jsx         → case-study depth layer (see §5)
   sections/                → Hero, Works, About, Services, Contact, + Navbar/summaries
-  components/               → AnimatedHeaderSection, AnimatedTextLines, Marquee, Planet
+  components/               → AnimatedHeaderSection, AnimatedTextLines, Marquee, GeminiStar (Hero 3D), ThemeToggle, Planet (unused)
   lib/
     motion.js               → EASE/DURATION/SCROLL_REVEAL_START tokens (single source for GSAP timing)
     media.js                 → isVideo() — shared between Works and ProjectPage
@@ -92,8 +92,221 @@ placeholders.
 
 ## Changelog
 
-### Milestone — Theme Polish: Crossfade Regression Fix + Deepened Cream Palette
+### Milestone — Gemini Hero, Stage 1: GLB, Material, Lighting, Placement, Motion
 *(this milestone)*
+
+Replaces the Hero's planet/ring/moon with the Gemini star GLB. **Stage 1
+only** — Stage 2 (video textures on the star's surface) and Stage 3
+(interaction) are deliberately not started and nothing here claims them.
+
+**What the GLB actually is** (parsed from the glTF JSON chunk directly,
+not assumed): one mesh `mesh_node`, 9,818 vertices / 19,632 triangles,
+348KB. It ships `POSITION` + indices and **nothing else** — no normals,
+no UVs, no materials, no cameras, no lights, no extensions. Bounding box
+≈ 1.90 × 1.90 × 0.26, i.e. a flat four-pointed star, thin along its
+native Z. Geometry was not modified. GLTFLoader synthesizes the missing
+normals, so `computeVertexNormals()` is called only if they are genuinely
+absent — recomputing unconditionally would smooth-shade across the tips
+and round off the points that make it read as a star.
+
+**Material — reflection, not transmission.** Real `transmission` was
+tried first and rejected *on the render*: the Canvas is transparent and
+nothing sits behind the star in the 3D scene, so there is nothing to
+refract. It flattened into a uniform white silhouette with none of the
+shading that describes the form, while still paying for three's
+per-frame transmission pass. The glass read instead comes from a very
+smooth base (`roughness 0.05`) under a full clearcoat, `metalness 0`, and
+a high `envMapIntensity`. Base colour is a slightly cool off-white
+(`#dee4ee`) rather than pure white: with a white albedo and a dielectric's
+~4% normal-incidence specular, diffuse dominates and the object is
+literally the plastic look. `sheen` was added and then removed — isolated
+against a frozen pose, its grazing-angle lobe aliased into a dark dotted
+fringe tracing the entire silhouette. `iridescence` stays at 0.15, which
+renders a clean edge at 2× DPR and still gives the pearlescent shift.
+
+**One material, two lightings.** The star deliberately passes *behind*
+the Hero copy (see placement below), which makes its value a legibility
+problem rather than only a taste one. Measured with the copy hidden so
+glyph pixels could not contaminate the reading: on paper the dark title
+reads against the white star at **18.8:1**, but in dark mode white type
+over a white star measured **1.03:1** — half the name was genuinely
+invisible. Dark mode therefore gets smoked glass: tinted *and*
+translucent, which is what smoked glass actually is. Both halves are
+load-bearing and each was measured, not guessed:
+
+- Tint alone fails — albedo scales only the diffuse term, while the
+  specular reflection of the softboxes is albedo-independent, so the
+  highlights still blew to pure white even with the base at `#3f444c`.
+- Opacity alone fails too — those highlights are HDR (>1.0) *before* tone
+  mapping, so scaling by alpha can still clip back to white.
+
+Together (`#5b626e`, `envMapIntensity 1.9`, `opacity 0.555`) the
+brightest pixel behind the title measures **3.19:1**, past the 3.0 WCAG
+large-text floor, with light mode untouched at 18.8:1. These values are a
+deliberate second pass — the first working set (`#4b515b` / 1.8 / 0.5)
+measured 3.79:1 but read too dark, and a brighter trial at `opacity 0.58`
+measured 2.96:1 and was pulled back, so the current figure is the
+brightest setting that still clears the floor. The variant follows the same
+`data-theme` attribute `index.html` resolves before first paint, via a
+`MutationObserver`, so it switches live with the toggle — verified
+round-tripping dark → light → dark (star luminance 131 → 255 → 131, no
+errors).
+
+**Lighting.** The previous four uniform `circle` Lightformers were tuned
+for the planet's matte spheres and are exactly wrong for a polished
+surface — an even environment gives a smooth material nothing with
+structure to reflect. Replaced with a studio set: a broad overhead key,
+two narrow high-intensity rect streaks crossing at an angle (these are
+what actually read as glass), a cool fill so the shadow side keeps a
+blue-white cast, and a wide warm wrap tying it to the page palette.
+`ambientLight` dropped 0.5 → 0.12 for the same reason. Still one baked
+256px cubemap; no post-processing, no bloom, no shadow maps added.
+
+**Rotation — a horizontal turntable around the vertical axis.** The star
+rotates on **world Y**, so it behaves like a thin physical object on a
+slightly raked platter: the left and right points swing toward and away
+from the viewer, the face sweeps front-facing → angled → edge-on →
+angled → front-facing, and the silhouette narrowing at edge-on is the
+intended read — it is what makes the object's real depth visible.
+
+Hierarchy is what makes this correct, and the ordering is deliberate. A
+small backward lean (`TILT_X 0.18`) is the **parent** and the spinner is
+its child, so the spin axis is that leaned vertical rather than the
+camera's view axis. A Y rotation leaves the up-vector untouched and only
+the fixed lean acts on it, which is what holds the top and bottom points
+steady while the object turns. There is no Y tilt term: on a turntable
+that never stops, a fixed Y offset only shifts the starting phase.
+
+Two earlier arrangements were tried and are recorded because each was
+wrong in an instructive way. Spinning on the **view axis** (Z) with the
+tilt inside gave a perfectly rigid silhouette — measured projected area
+constant within 1.3%, rigid-rotation fit at IoU 0.962 — but that is
+precisely the failure: a constant silhouette is a flat 2D mark rotating
+on its face, with no depth ever revealed. Before that, spinning on Z with
+the tilt *outside* let the star turn within its own tilted plane while
+the foreshortening axis stayed put, so the silhouette pumped once per
+quarter turn. Neither reads as a physical object turning.
+
+Verified on the render, not asserted: sampled across a full revolution,
+**width varies 38%** (492→800px, face-on to near edge-on) while **height
+holds within 2%** (708–724px) — the numeric signature of a Y-axis
+turntable, and the exact inverse of the view-axis version it replaced.
+Frames confirm it visually: full four-pointed face at one phase, a narrow
+vertical sliver showing the edge at another. `rotation.z` was logged as
+**exactly 0** throughout, so no view-axis spin survives anywhere. One
+revolution per 110s, `delta`-based via `useFrame` so the rate is
+frame-rate independent, gated on `prefers-reduced-motion` — which
+`lib/motion.js`'s global `gsap.defaults({duration: 0})` does not cover,
+since it collapses tweens and not a per-frame increment.
+
+**Entrance — fast drop with the spins inside it.** Drop and rotation both
+start at 0 and both run `EASE.cinematic`, so the star is spinning fastest
+exactly while it is falling fastest and the two read as one movement
+rather than two stacked effects: `DURATION.transition` (1.5s) for the
+drop from `y: 5`, `DURATION.reveal` (3.0s) for **2.5 horizontal turns**.
+Because that curve is heavily front-loaded, almost all the rotation is
+spent inside the fall and the remainder becomes a long decelerating tail.
+Measured profile: **2.880 → 0.798 → 0.182 → 0.034 → 0.002 turns/s**, drop
+settled by ~1.9s, handing off to a 0.009 turns/s idle — no velocity step
+at either end, so the transition into the idle spin is invisible. No
+bounce and no overshoot: both eases are pure ease-outs, and
+`EASE.revelation` (the one canonical curve that overshoots) is
+deliberately not used.
+
+The drop is animated on a dedicated inner group as a pure 5 → 0 offset
+rather than on the group carrying the resting position: `.from()`
+snapshots its destination when the tween is built, so animating the
+positioned group directly would freeze whatever value happened to be
+there at that moment. That separation (React owns layout, GSAP owns the
+entrance offset) also makes resize safe.
+
+**Placement — the star crosses behind the type, by design.** The
+typography's box is explicitly *not* an exclusion zone: the star is meant
+to pass behind the copy the way the planet did, and the `-z-50` figure is
+what keeps the text in front. Layering, not size, is what protects
+readability — so the object is sized for presence (a requested scale of
+1.3, ~605–672px tall at desktop, against the ~530px the planet-era
+version rendered) and simply overlaps.
+
+The only clamps are edge guards, both derived from the live R3F viewport
+rather than per-breakpoint constants, and both fixing a bug found by
+measuring the render:
+
+1. At 390px the star was clipped hard against both edges (left margin
+   0px, right 1px). The camera's fov is vertical, so a narrow viewport
+   loses horizontal room while keeping the same visible height. Width is
+   now capped against `viewport.width`, which self-corrects at every
+   aspect ratio.
+2. A height cap keeps it inside short frames. Vertical placement is a
+   fraction of the frame (centre at 44% from the top), so the composition
+   holds its proportions everywhere instead of drifting.
+
+**An earlier iteration tried the opposite** — measuring the copy's layout
+top and treating it as clear space the star had to stay above. That is
+recorded because it produced two findings worth keeping: the free space
+above the copy ranges from ~23% to ~55% of the viewport depending on how
+the title wraps (so no fixed fraction can express it), and reading that
+block with `getBoundingClientRect()` returns a value from *inside* its own
+GSAP entrance (806px at 0.5s against 388px at rest) — `offsetTop` is the
+transform-independent value. The approach was dropped because strict
+non-overlap forced the star below its previous size on short viewports,
+which is the wrong trade for a Hero centrepiece.
+
+**Verified on the rendered result, and on the production build**
+
+- Star bbox measured from actual pixels at 390×844, 700×900, 820×1180,
+  1024×900, 1440×900 and 1920×1080: positive margins on all four sides
+  everywhere, so nothing is clipped at any edge, while the star crosses
+  behind the copy as intended.
+- Text legibility measured, not eyeballed, with the copy hidden so glyph
+  pixels could not skew the sample: worst-case pixel behind the title is
+  3.19:1 (dark) and 18.8:1 (light). An earlier reading that sampled the
+  composite was wrong — it was measuring the white glyphs themselves, not
+  the star behind them, which is why the copy is hidden for this check.
+- Zero console/page errors and zero horizontal overflow in all 12
+  production combinations (6 viewports × both themes).
+- Theme toggle round-tripped dark → light → dark with the star's material
+  switching live each time and no errors.
+- Entrance sampled per animation frame: drop and horizontal rotation
+  decelerate together (2.928 → 0.861 → 0.239 → 0.049 → 0.006 turns/s),
+  the drop is settled by ~1.8s, and the idle picks up at 0.009 turns/s —
+  no initialization jump, no snap, no bounce. `rotation.z` logged as
+  exactly 0 for the whole run, confirming no residual view-axis spin.
+- Turntable confirmed numerically across a full revolution: width varies
+  38% while height holds within 2%, plus frames showing the full
+  four-pointed face at one phase and a narrow edge-on sliver at another.
+  Worth recording that **three** pixel estimators gave false readings
+  across this milestone — "angle of the farthest point" reports a
+  near-constant on a 4-fold symmetric shape, a colour-tint mask silently
+  dropped parts of the star as the warm lightformer swept it, and
+  sampling the composite measured the white glyphs instead of the star
+  behind them. Each was caught by cross-checking against a second,
+  independent measure rather than trusting the first number.
+- Both themes reviewed at desktop and mobile.
+- `npm run build` and `npm run lint` both pass clean.
+
+**Deliberate limitations**
+
+- **The dark-mode star is a different value from the light-mode one.**
+  That is a deliberate art-direction call, taken because the star
+  overlaps the type: pure white in dark mode made half the name
+  unreadable. It is two constants in one `MATERIAL` map if the preference
+  changes.
+- **No UVs on the GLB is the real Stage 2 blocker.** Mapping video onto
+  this surface needs either generated UVs or a triplanar-projected
+  material — it is not a texture swap. The material is kept as a JSX
+  child of the mesh rather than a shared module-level instance so it can
+  be swapped or augmented without restructuring.
+- `Planet.jsx` and `public/models/Planet.glb` (18MB) are now unreferenced
+  but were **left in place** — removing them is a separate call, and
+  reverting for comparison is plausible mid-Stage-1.
+- No interaction, no video textures, no pointer response: Stages 2 and 3.
+
+**Files changed**: `src/components/GeminiStar.jsx` (new),
+`src/sections/Hero.jsx`. No new dependencies. `public/models/3d-star.glb`
+was supplied, not generated.
+
+### Milestone — Theme Polish: Crossfade Regression Fix + Deepened Cream Palette
 
 Two known issues left open by the previous theme milestone: hover
 animations had visually degraded since the theme system landed, and light
