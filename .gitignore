@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Raw Gemini star video sources (373MB) — only public/videos/optimized/ is
+# actually read by GeminiStar.jsx (src/constants/geminiVideos.js). Kept on
+# disk for future re-encodes, deliberately excluded from git history.
+public/videos/*.mp4

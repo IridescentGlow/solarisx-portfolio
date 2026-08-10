@@ -12,7 +12,30 @@ experiences people remember`;
     // is what puts the star behind the typography — the same arrangement the
     // planet used. The star is meant to cross behind the copy; layering, not
     // size, is what keeps the text in front.
-    <section id="home" className="flex flex-col justify-end min-h-screen">
+    <section
+      id="home"
+      // pointer-events-none on the whole section, re-enabled (pointer-
+      // events-auto) on just the figure/Canvas below: the star is sized to
+      // visually pass behind this section's copy, and that copy is purely
+      // presentational (no links, no buttons). Without this, the DOM text —
+      // and, per CSS stacking rules, even the SECTION'S OWN transparent box,
+      // which paints ABOVE its own -z-50 child — intercepts the pointer
+      // before it ever reaches the canvas, so Stage 3's hover response
+      // silently fails for however much of the star's silhouette falls
+      // under the title's text box.
+      //
+      // `isolate` is the other half of the same fix, found the same way
+      // (elementFromPoint during Stage 3 verification): without it, -z-50
+      // isn't scoped to this section's own stacking order — it competes
+      // against the WHOLE page's shared root stacking context, so once the
+      // section itself stopped capturing the pointer, the hit fell through
+      // not to the canvas but to HomePage.jsx's page-wide fade wrapper
+      // (`<div className="opacity-100 transition-opacity ...">`), which
+      // also isn't positioned and so also paints above a bare -z-50 child.
+      // `isolate` gives this section its own local stacking context, so
+      // -z-50 only has to compete with this section's OWN children.
+      className="flex flex-col justify-end min-h-screen pointer-events-none isolate"
+    >
       <AnimatedHeaderSection
         subTitle={"Visual Storyteller · Creative Technologist"}
         title={"Dagim Demissie"}
@@ -20,7 +43,7 @@ experiences people remember`;
         textColor={"text-ink"}
       />
       <figure
-        className="absolute inset-0 -z-50"
+        className="absolute inset-0 -z-50 pointer-events-auto"
         style={{ width: "100vw", height: "100vh" }}
       >
         <Canvas

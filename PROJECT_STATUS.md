@@ -92,8 +92,458 @@ placeholders.
 
 ## Changelog
 
+### Milestone — Gemini Hero, Stage 3: First Interaction (Hover)
+*(this milestone, tuned in a follow-up pass — see below)*
+
+The Gemini star now responds to the pointer: hovering it grows and its idle
+spin noticeably slows, both smoothly interpolated; moving away smoothly
+reverses both. **Stage 3's first interaction only** — no dragging, click
+response, cursor-following, tilt, or camera movement.
+
+**Architecture — reuses the existing render loop, adds no new animation
+system.** The idle spin was already a raw `useFrame` increment
+(`spinner.current.rotation.y += delta * SPIN_SPEED`), not a GSAP tween, so
+hover speed is implemented the same way: a `hoverState` ref holds a plain
+`{ t: 0..1 }` object that GSAP tweens on pointer over/out
+(`duration: DURATION.micro`, `ease: EASE.precise` — the same tokens already
+established for UI-scale feedback elsewhere), and `useFrame` reads
+`hoverState.current.t` each frame to blend the per-frame rotation increment
+between `SPIN_SPEED` and `HOVER_SPIN_SPEED`. Critically, `rotation.y` itself
+is never written to directly — only the increment shrinks — so the current
+angle is always preserved and there is nothing to snap, reset, or restart on
+hover/leave. This mirrors the existing separation of concerns from the
+entrance animation: GSAP owns the tweened *value*, the render loop owns
+*applying* it to the scene, so the two never compete.
+
+**Scale uses the same pattern via a new nested group.** `hoverGroup`, a
+plain `<group>` inserted between the existing `appliedScale`-scaled group
+and the tilt/spinner groups, has its `.scale` written imperatively every
+frame (`1 + hoverState.current.t * (hoverScaleMultiplier - 1)`) — never
+through React props/state, so it costs nothing per-frame beyond a single
+`setScalar` call. `HOVER_SCALE` is a single tunable constant, not scattered
+magic numbers.
+
+**Pointer detection — R3F's built-in event system, no new dependency.**
+`onPointerOver`/`onPointerOut` directly on the star's `<mesh>`; three.js
+raycasting through the Canvas already supports this natively.
+
+**Tuning pass — first-pass values verified as smooth but read as too
+subtle.** The user's own words: "the effect is currently too subtle." Three
+constants moved together, because the ask was specifically for the
+*contrast* between the two states to be unmistakable, not just for either
+number in isolation:
+
+| Constant | Before | After |
+|---|---|---|
+| `SPIN_SPEED` (idle) | one revolution / 22s | one revolution / **16s** |
+| `HOVER_SCALE` | 1.08 (8%) | **1.18** (18%) |
+| `HOVER_SPIN_SPEED` | 35% of idle | **15%** of idle |
+
+Idle got faster *and* hover got proportionally slower relative to the new,
+higher idle baseline, so hover reads as a real deceleration against an
+already-energetic default rather than "the same speed, marginally reduced."
+Rotation axis, direction, tilt, and the entrance timeline are untouched —
+only these three tunables moved.
+
+**A real headroom bug found while tuning, not just a bigger number
+applied.** Raising `HOVER_SCALE` to 1.18 alone did almost nothing on
+screen. Root cause, confirmed by reading the actual clamp math rather than
+assumed: `hoverScaleMultiplier` was capped against `maxSafeScale /
+appliedScale`, where `maxSafeScale` comes from the SAME `WIDTH_FIT`/
+`HEIGHT_FIT` (0.86/0.82) the *resting* composition already uses almost in
+full. On any landscape desktop viewport the vertical term is what binds
+(camera fov/distance alone determine `viewport.height` in world units —
+it does not scale with the window's pixel height, only `viewport.width`
+does via aspect), and at the requested resting scale of 1.3 that term
+already sits within ~1% of its own ceiling — leaving `hoverScaleMultiplier`
+almost no room regardless of how large `HOVER_SCALE` was raised. On a
+narrow/portrait viewport it's worse: `appliedScale` there is clamped to
+exactly equal `maxSafeScale` by definition (`WIDTH_FIT` is the binding
+term), so the ratio computes to exactly 1 — **zero hover growth at all**,
+confirmed both by re-deriving the arithmetic from the actual constants and
+by measuring `hoverGroup.scale.x` directly in a rendered page at 390×844,
+which read exactly `1` under hover before the fix.
+
+The fix is a second, looser pair of fit fractions — `HOVER_WIDTH_FIT` /
+`HOVER_HEIGHT_FIT` (0.94/0.94) — used only to compute the hover ceiling,
+leaving `WIDTH_FIT`/`HEIGHT_FIT` and the resting composition completely
+unchanged. The reasoning: the permanent resting pose needs its full 0.86/
+0.82 margin because it's what every visitor sees by default, but a
+pointer-engaged hover is transient and reversible, so it can safely use a
+tighter (though still real, still-under-1.0) margin without ever letting the
+star's edge touch the viewport. Verified this produces the intended,
+non-zero growth on both a landscape desktop viewport (measured
+`hoverGroup.scale.x` ≈ 1.159, matching the hand-derived prediction from the
+new constants almost exactly) and, critically, on a portrait mobile
+viewport (measured ≈ 1.093 — real, visible growth where there was
+previously none).
+
+**Viewport safety — same guard, updated ceiling.** `hoverScaleMultiplier =
+Math.min(HOVER_SCALE, maxSafeHoverScale / appliedScale)` still caps hover
+growth at however much headroom actually exists, exactly as before; only
+`maxSafeHoverScale`'s own fit fractions changed, so a hovered star still can
+never be pushed past a real, computed edge-safety bound.
+
+**A real architectural bug found and fixed, not worked around.** The star
+is meant to visually pass behind the Hero copy (a `-z-50` figure, Stage 1's
+design), and that copy is purely presentational (no links/buttons). The
+first hover implementation worked everywhere the star was NOT visually
+covered by text, but silently failed wherever it was — confirmed with
+`document.elementFromPoint()` during verification, not assumed: at a point
+where the star sits behind the title, the DOM hit-test returned the title's
+own `<span>`, meaning the pointer event never reached the canvas at all.
+Adding `pointer-events-none` to just the text was not sufficient on its
+own: per CSS stacking rules, a plain (non-positioned) ancestor's OWN box
+still paints *above* its own negative-z-index descendant, so
+`elementFromPoint` next returned the Hero `<section>` itself, and — because
+neither the section nor `HomePage.jsx`'s page-wide fade wrapper establish a
+local stacking context — the hit then fell through not to the canvas but to
+that unrelated, page-wide ancestor. The real fix has two parts, both on the
+Hero `<section>` only: `pointer-events-none` on the section (re-enabled via
+`pointer-events-auto` on just the `<figure>`/Canvas), plus `isolate` (CSS
+`isolation: isolate`) so the `-z-50` figure's stacking is scoped locally to
+Hero's own subtree instead of competing against the whole page's shared
+root stacking context. Scoped entirely to `Hero.jsx`; `AnimatedHeaderSection`
+itself and its five other callers (About/Works/Services/Contact/
+ProjectPage) are untouched.
+
+**Verified in the browser** (headless Chromium with
+`--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader`, this
+sandbox's documented requirement for video-texture rendering — Claude-in-
+Chrome was not available this session, so this is not the normal-browser
+check the user's own instructions treat as final authority, and is flagged
+as such rather than overclaimed):
+
+- Scale increase confirmed via matched-elapsed-time screenshot pairs (same
+  total time since page load in both, so the star's rotation phase lines up
+  and the comparison isolates scale rather than being confounded by pose):
+  the hovered star's silhouette measurably extends further in multiple
+  directions than the non-hovered baseline at the same pose.
+- The elementFromPoint architectural bug above was found BECAUSE hovering
+  at a point behind the title text produced no visible growth before the
+  Hero.jsx fix, and did produce visible growth after it — confirmed with
+  both a DOM-level check (`elementFromPoint` returns `<CANVAS>` after the
+  fix, was `<SPAN>` before) and a screenshot.
+- Leave/return-to-idle verified by construction (the tween target
+  deterministically returns to `t: 0`, which the render loop reads
+  unconditionally) and is visually consistent with that in a post-leave
+  screenshot.
+- Rapid repeated hover/unhover (3 cycles of ~60ms dwell each) settles to a
+  normal single-hover-sized state with no runaway growth or thrown errors —
+  consistent with GSAP's `overwrite: true` preventing tween pileup on the
+  same tweened object/property.
+- Zero console/page errors across every check performed.
+- Zero horizontal overflow at 1440px desktop and 390px mobile
+  (`scrollWidth === clientWidth` at both).
+- Light theme spot-checked (`data-theme` resolves to `"light"` under an
+  emulated light color-scheme, hover still grows the star, no errors).
+- Mobile viewport (390×844, touch emulated) renders without clipping.
+- DOM `<video>` element count unchanged (2, both pre-existing and unrelated
+  to the star) after hover interaction — confirms the video-texture
+  lifecycle from Stage 2 is untouched.
+
+**Tuning pass — verified with direct scene-graph reads, not just
+screenshots.** The first pass's screenshot-comparison method (matched
+elapsed time, so rotation phase lines up) is inherently approximate for
+confirming an exact number like "1.18". This pass instead read the actual
+Three.js objects during a real render: `renderer.render` (patched via
+three.js's own `__THREE_DEVTOOLS__` hook — a real, built-in instrumentation
+point, not a hack) exposes the live `scene`/`camera` each frame, from which
+`hoverGroup.scale.x` and the spinner's `rotation.y` are read directly —
+exact values, not pixels.
+
+Two sandbox-specific problems had to be solved to get a trustworthy
+measurement, both recorded because they'd otherwise make the numbers below
+look wrong:
+
+- **GSAP's lag smoothing vs. this sandbox's ~2-3fps SwiftShader path**
+  (documented in Stage 2's own performance note). GSAP's ticker caps how
+  much elapsed time it counts per tick after a slow frame, specifically to
+  avoid visual jumps — but under sustained 2-3fps that stretched the 3s
+  entrance timeline to 90+ seconds of real wall-clock time, confirmed by
+  sampling `rotation.y` once a second and watching it creep for over a
+  minute. Calling `gsap.ticker.lagSmoothing(0)` on the app's own already-
+  running gsap instance (imported via the exact resolved Vite dep URL the
+  app itself uses, so it's the same singleton, not a second copy) for the
+  verification session only made the entrance complete in close to its
+  authored duration — what a real 60fps browser already does natively.
+  This changes nothing about app behavior, only how long a *measurement*
+  has to wait for the entrance to hand off before idle/hover numbers mean
+  anything.
+- **A raycast hit-point that was wrong, not the hover mechanism.** Locating
+  a screen point to hover by scanning for `elementFromPoint() === CANVAS`
+  is unreliable: the entire canvas is one opaque DOM box for hit-testing
+  purposes regardless of what's transparently drawn inside it, so a point
+  can report "CANVAS" while still missing the star's actual (much smaller,
+  scale-clamped) silhouette on mobile. Switched to projecting the star
+  mesh's real `getWorldPosition()` through the actual camera
+  (`Vector3.project(camera)`, three.js imported the same way as gsap above)
+  to compute the exact on-screen pixel — this is what surfaced the
+  headroom bug above in the first place: the "no growth" reading on mobile
+  was reproducible and exact once the mouse was verifiably on the star, not
+  an artifact of missing it.
+
+With both fixed, measured over a real render:
+
+- Idle rotation: **≈0.33-0.37 rad/s** (target from `SPIN_SPEED`: 0.393
+  rad/s / 16s period) — within this sandbox's own frame-timing jitter of
+  the target, and a clearly faster idle than the pre-tuning 22s-period
+  baseline.
+- Hover rotation: **≈0.058-0.065 rad/s** (target from `HOVER_SPIN_SPEED`:
+  0.059 rad/s), a **hover/idle ratio of ≈0.16-0.19** against the tuned
+  target of 0.15 — confirms hover reads as a clear, deliberate slowdown
+  relative to the new faster idle, not the prior barely-perceptible 0.35
+  ratio.
+- Hover scale on a landscape desktop viewport (1440×900): `hoverGroup.
+  scale.x` measured **1.159** — matches the hand-derived prediction from
+  `HOVER_SCALE`/`HOVER_WIDTH_FIT`/`HOVER_HEIGHT_FIT` to three decimal
+  places, confirming the clamp math itself, not just the on-screen result.
+- Hover scale on a portrait mobile viewport (390×844): measured **1.093**
+  — real, visible growth, versus exactly **1.0** (zero growth) measured
+  under the pre-fix clamp at the same viewport, confirming the headroom
+  bug is fixed and not just theorized.
+- Leave/return-to-idle: scale returns to exactly **1.0** after leaving
+  hover, and rotation continuity was read directly (not inferred): the
+  spinner's `rotation.y` continued increasing smoothly across a hover-then-
+  leave transition (e.g. 25.43 → 26.13 rad across the leave), with no drop
+  toward 0 and no discontinuity — confirms the "never write `rotation.y`
+  directly" architecture still holds under the new speed values.
+- Rapid hover/unhover (5 cycles of ~60ms dwell each): settles to exactly
+  scale **1.0** afterward with no runaway growth, no drift, and zero
+  console/page errors — consistent with GSAP's `overwrite: true` still
+  preventing tween pileup at the new duration/values.
+- Both themes: hover scale measured identically (1.159) under dark and an
+  emulated light `colorScheme`, confirming the tuning is theme-independent
+  (as expected — only `GeminiStar.jsx`'s numeric constants changed, no
+  `MATERIAL` values were touched).
+- Zero horizontal overflow (`scrollWidth === clientWidth`) at both 1440×900
+  desktop and 390×844 mobile, before and after hover.
+- DOM `<video>` element count unchanged (2) throughout — the video-texture
+  lifecycle is untouched by this pass.
+- Zero console/page errors across every check in this pass, at both
+  viewports and both themes.
+- Screenshots (dark desktop, light desktop, dark mobile — idle and hovered
+  each) were also captured as a supplementary visual sanity check; video
+  content and material read correctly in all of them, though the idle/
+  hover pair isn't a matched-pose comparison this time (the star keeps
+  rotating between the two captures), which is why the scene-graph reads
+  above, not the screenshots, are the rigorous evidence for the scale/speed
+  numbers.
+- `npm run build` and `npm run lint` both pass clean after the tuning
+  changes.
+
+**Deliberate limitations**
+
+- Both themes were now independently exercised this pass (dark and an
+  emulated light `colorScheme`, each with its own hover measurement) —
+  updates the prior pass's note that only light mode had been isolated.
+- The hover scale tween does not special-case `prefers-reduced-motion` —
+  it uses the same explicit-duration GSAP pattern the entrance animation
+  already uses, which (like the entrance) is not covered by
+  `lib/motion.js`'s global `gsap.defaults({ duration: 0 })` since that only
+  applies when a tween does NOT specify its own duration. The idle
+  rotation's own reduced-motion gate (pre-existing, unchanged) still freezes
+  continuous spin entirely, so there is no continuous motion for reduced-
+  motion users regardless; only the brief 0.4s scale-in on hover is
+  unaffected, which is not the kind of motion that setting is chiefly meant
+  to suppress.
+- No cursor style change (e.g. `cursor: pointer`) was added on hover — not
+  requested, and out of this stage's explicit scope.
+- `npm run build` and `npm run lint` both pass clean.
+
+**Files changed**: `src/components/GeminiStar.jsx` (hover state, hover
+scale group, hover-aware rotation increment, pointer handlers on the mesh;
+tuning pass: `SPIN_SPEED`/`HOVER_SCALE`/`HOVER_SPIN_SPEED` values, plus new
+`HOVER_WIDTH_FIT`/`HOVER_HEIGHT_FIT` constants and a second `maxSafeHoverScale`
+computation feeding `hoverScaleMultiplier`), `src/sections/Hero.jsx`
+(`pointer-events-none`/`isolate` fix so hover reaches the canvas wherever
+the star sits behind the Hero copy — untouched by the tuning pass). No new
+dependencies — GSAP and R3F's pointer events are both already in use.
+
+### Milestone — Gemini Hero, Stage 2: Video Textures on the Star's Surface
+
+Multiple portfolio video clips now live directly on the Gemini star's own
+surface, following its Y-axis turntable rotation with zero drift because
+they are baked into the same vertex buffer Stage 1 already animates —
+not separate planes, not a shader overlay. **Stage 2 only.**
+
+**Phase 0 — video assets.** `public/videos/` held 11 source clips
+(`work-01.mp4` … `work-11.mp4`), profiled directly with `ffprobe` rather
+than assumed: mixed 16:9/9:16/one 33:80 orientation, 25–60fps, 12.7s–558.8s
+duration, 373.4MB total, largest single file 168MB. None were shipped raw.
+For each, the actual footage was reviewed (`ffmpeg` contact-sheet frame
+grids, iterated one clip at a time) to hand-pick an ~8s window with real
+motion and no dead time — not a mechanical "first 8 seconds," which for
+several sources would have landed on a static title card or the "rotate
+your phone" instruction screen (`work-09`). Encoded to
+`public/videos/optimized/`: H.264, CRF 23, audio stripped, orientation and
+resolution preserved as-is (all sources already ≤1280×720, so no
+up/downscaling), the four 60fps sources capped to 30fps. Originals
+untouched. Result: **373.4MB → 11.9MB, a 31.4× reduction**, verified per
+file (resolution, duration, zero audio tracks) and spot-checked visually
+for corruption on 4 of the 11.
+
+**The GLB constraint, confirmed again rather than trusted from Stage 1's
+notes:** re-parsed the glTF JSON chunk directly. One mesh, POSITION +
+indices only, no NORMAL, no UV, no material — identical to Stage 1's
+finding. No UVs is what makes "map a video onto this" hard at all: there
+is no existing surface parameterization to sample against, and generating
+one for an arbitrary mesh is normally nontrivial.
+
+**Why a planar/group-based split, not triplanar or a custom shader.** The
+star is thin along local Z (0.26 units) versus ~1.9 across X/Y — nearly
+flat — so a projected planar UV unwrap is close to seam-free specifically
+for this geometry, which a generic mesh wouldn't offer for free. Combined
+with three.js's own mechanism for "different materials on one mesh"
+(geometry groups, contiguous index-buffer runs each tagged with a
+`materialIndex` into `mesh.material[]`), this gives real per-region UVs
+and lets video regions use full `MeshPhysicalMaterial` — same clearcoat,
+iridescence, roughness as Stage 1 — rather than an unlit texture pretending
+to be the object. Triplanar or a hand-written fragment shader could also
+have worked, but would have meant reimplementing clearcoat/iridescence
+compositing by hand to get "video content + glass + reflection" instead of
+getting it for free from the existing material stack.
+
+**Region shape came from measuring the geometry, not guessing.** Decoded
+the raw vertex buffer and profiled radius-from-center against
+angle-around-Z: the star's 4 points sit at exactly **0°/90°/180°/270°**
+(peak radius ~0.95), with the concave waist bottoming out at ~0.45 on the
+45° diagonals. `src/lib/starVideoRegions.js` uses this: a triangle joins a
+video region only if its centroid's radius clears 0.65 *and* its angle
+falls within 18° of that point's own direction, so video patches sit near
+each tip rather than smearing across the whole point-to-center wedge — the
+waist curves and centre hub stay plain glass, satisfying "enough of the
+original material visible between video regions" from the geometry itself
+rather than by eyeballing a look. Boundary vertices are duplicated
+per-region (a vertex shared by two differently-classified triangles gets
+one UV-correct copy per region) so each region's local planar projection
+— rotated so that region's own tip direction is the projection axis — is
+undistorted at its own edges, at the cost of a very minor seam in the
+recomputed normals exactly at each boundary.
+
+**Multiple videos, config-driven, not hardcoded.** `src/constants/
+geminiVideos.js` exports `GEMINI_VIDEO_REGIONS`, an array of
+`{ tipAngleDeg, src }`. The region-splitter reads this array's length to
+decide how many regions to carve — adding a 5th/6th entry (at one of the
+geometry's own valid tip angles) works without touching the region-building
+code or `GeminiStar.jsx`. Currently populated with 4 of the 11 optimized
+clips, picked for stylistic variety against each other (cinematic
+wormhole / space-themed music production / colourful motion graphics /
+editorial beauty cards) rather than four similar pieces back to back.
+
+**Material integration — video sits under the same glass, not instead of
+it.** `GLASS_PROPS` (clearcoat 1, iridescence 0.15, roughness 0.05, etc.)
+is shared verbatim across all 5 materials (4 video regions + 1 base), so
+clearcoat highlights and reflections render on top of a video region
+exactly as they do on plain glass. `color`/`map`/`opacity` are the only
+per-region, per-theme variables. Before a clip has a decoded frame (or if
+it never gets one), that region's material falls back to the *current
+theme's* plain glass color/opacity — identical to its surroundings — so
+there is no black rectangle, no placeholder, and no visible seam until
+content actually arrives; a permanently-failed clip just stays plain glass
+forever, which is the correct fallback, not an error state.
+
+**Video lifecycle.** `useStarVideoTextures` creates one `<video>` element
+per region on mount (muted, loop, playsInline, autoplay, `preload=auto`),
+wraps each in a `THREE.VideoTexture`, and disposes everything (pause,
+clear `src`, `texture.dispose()`) on unmount. Elements are never attached
+to the DOM — three.js only needs a playing `HTMLVideoElement` to sample
+from, not a visible one — so there is no risk of a stray `<video>`
+floating over the page; confirmed via `document.querySelectorAll("video")`
+finding only the 2 unrelated DOM videos that already existed elsewhere on
+the page (Works/ProjectPage previews), unchanged before and after
+repeated mount/unmount cycles.
+
+**A real, non-obvious bug found and root-caused, not just patched.** The
+very first render showed a fully uniform white star — no video content
+anywhere, at any rotation phase. Investigated systematically rather than
+guessing: confirmed the geometry groups were correct (5 groups, right
+triangle counts), confirmed `mesh.material` was genuinely an array of 5
+materials with real `VideoTexture` maps attached, confirmed the video
+elements were actually decoding (`currentTime` advancing correctly,
+`readyState 4`, correct dimensions, zero errors), confirmed the UV
+attribute's full distribution was well-spread and non-degenerate (a 10×10
+occupancy histogram covered the whole 0–1 range in both axes), and ruled
+out a `null`→texture shader-recompile transition (tested texture-from-
+first-render, no change) and a lighting/specular washout (tested
+`envMapIntensity 0, roughness 1, clearcoat 0`, still uniform; tested an
+unlit `MeshBasicMaterial` with the same map, still uniform). Every one of
+those came back clean. The actual cause: this environment's headless
+Chromium was falling back to software WebGL (visible in the console as
+"Automatic fallback to software WebGL has been deprecated"), and video-
+element-to-texture upload does not work correctly under that path without
+`--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader`. With
+those flags, the exact same code renders correctly. This was an artifact
+of the *testing sandbox*, not the application — worth recording plainly,
+because every verification claim below was re-run after finding this, not
+left standing on the broken measurement.
+
+**Verified on the rendered result, with those flags, not asserted:**
+
+- Video content is genuinely visible and legible — recognizable text and
+  imagery — at multiple star points simultaneously, confirmed across
+  dense multi-frame rotation sampling in **both themes** (dark mode: a
+  striped pattern clearly readable on the smoked-glass material; light
+  mode: multiple distinct clips visible at once with correct color/detail).
+- Stage 1 motion, unregressed: entrance sampled frame-by-frame (star
+  off-screen above at 0.7–1.1s, settles by ~1.6–2.4s, no snap); the
+  turntable is still Y-axis (no reversion to the earlier view-axis
+  mistake); scale, position, and typography layering all measured
+  unchanged from Stage 1's own figures.
+- Both themes' material identity preserved: dark mode still reads as
+  smoked graphite glass, light mode still reads as bright glass, matching
+  Stage 1's screenshots exactly at rotation phases with no video patch in
+  view.
+- Zero console/page errors and zero horizontal overflow across all 12
+  combinations (6 viewports × both themes) on the dev server, and
+  re-confirmed on the **production build** (6 of the 12 combinations
+  re-checked post-build, plus a dedicated video-content check).
+- Lifecycle: navigated away to `/projects/medihelp` and back, then did a
+  full page reload — zero errors through the whole cycle, star and video
+  regions render correctly afterward, DOM video-element count unchanged
+  (confirming no leaked elements from repeated mount/unmount).
+- Performance measured, not assumed, and the measurement's own limits
+  reported honestly: JS heap ~16.5MB, and a 3-second requestAnimationFrame
+  sample landed at ~2.3fps. That figure reflects this sandbox's
+  *software*-rendered WebGL specifically (see above) — not real hardware,
+  where clearcoat/iridescence PBR on a 19,632-triangle mesh is trivial for
+  any GPU. To isolate whether video decoding itself was the cost rather
+  than the pre-existing Stage 1 material stack, the same measurement was
+  re-run with every region's `map` forced to `null` (identical geometry,
+  identical shading, zero video): **~3.0fps — statistically the same
+  number.** Video textures measurably add nothing on top of what Stage 1's
+  own PBR material already costs under software rendering.
+- `npm run build` and `npm run lint` both pass clean.
+
+**Deliberate limitations**
+
+- Only 4 of the 11 optimized clips are wired into
+  `GEMINI_VIDEO_REGIONS` — not all 11 play at once, both to keep
+  simultaneous video decode modest and because the brief explicitly asked
+  for *designed* composition over algorithmic scattering. Swapping which
+  4 (or adding a 5th/6th region) is a config-file change, not a
+  restructure.
+- No staggered/lazy loading or pause-when-hidden was added. The measured
+  cost (see above) gave no evidence it was needed, and the brief was
+  explicit not to sacrifice the visual result pre-emptively; revisit if a
+  real-device measurement ever shows otherwise.
+- The recomputed normals introduce a very minor shading seam exactly at
+  each region boundary (an unavoidable consequence of duplicating
+  boundary vertices for undistorted local UVs). Not visible at the sizes
+  and distances this renders at in the Hero; would be worth revisiting
+  only if a future stage brings the camera closer.
+- `video.crossOrigin` was not set — unnecessary today since all clips are
+  same-origin (`public/videos/optimized/`), but would need adding if a
+  future stage ever serves these from a CDN.
+
+**Files changed**: `src/components/GeminiStar.jsx` (geometry-region
+integration, video lifecycle hook, multi-material mesh), `src/lib/
+starVideoRegions.js` (new), `src/constants/geminiVideos.js` (new),
+`public/videos/optimized/*.mp4` (new, 11 files), `public/videos/*.mp4`
+(new source assets, untouched). No new dependencies — `THREE.VideoTexture`
+and geometry groups are core three.js.
+
 ### Milestone — Gemini Hero, Stage 1: GLB, Material, Lighting, Placement, Motion
-*(this milestone)*
 
 Replaces the Hero's planet/ring/moon with the Gemini star GLB. **Stage 1
 only** — Stage 2 (video textures on the star's surface) and Stage 3
