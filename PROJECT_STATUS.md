@@ -92,6 +92,432 @@ placeholders.
 
 ## Changelog
 
+### Milestone — Gemini Hero, Stage 4: Grab, Drag, Release, Momentum
+
+**Hover -> it notices you** (Stage 3), **move around it -> it subtly
+responds** (Stage 3.5), and now **grab it -> you can rotate it, release it
+-> momentum carries it, then it settles back into the cinematic spin.**
+Dragging and click/click-response and camera movement beyond this are still
+out of scope.
+
+**Rotation ownership — one property, one priority gate, not a second
+transform.** Unlike proximity tilt (a genuinely separate roll/pitch layer
+that composes additively on its own group), drag rotates the exact same
+`spinner.rotation.y` the idle/hover turntable already owns, on the exact
+axis the brief requires. A second competing group here would just mean two
+systems fighting over what "the star's current angle" means, so priority is
+a single boolean gate in `useFrame` instead:
+
+```js
+if (!entranceDone.current || prefersReducedMotion()) return;
+if (isDragging.current) return; // the drag's own pointermove listener owns rotation.y right now
+// ...idle/hover speed + momentum decay, as before
+```
+
+While `isDragging.current` is true, `useFrame` never touches `rotation.y` —
+a window-level `pointermove` listener (attached only for the lifetime of one
+drag) writes it directly, immediately, on every real pointer event rather
+than once per rendered frame. The two writers are mutually exclusive by
+construction, not by convention.
+
+**Grab — gated the same way proximity tilt already is, plus one more
+check.** `handlePointerDown` (added to the same `<mesh>` that already has
+`onPointerOver`/`onPointerOut`) requires `supportsProximityTilt()` (a real
+hover-capable, fine pointer — see Stage 3.5) AND `entranceDone.current`: the
+entrance's own GSAP timeline is still writing `spinner.rotation.y` directly
+until it hands off (see the `useGSAP` block above), so grabbing before that
+handoff would mean the entrance tween and the drag handler fighting over the
+same property — exactly what this stage is required not to do. It also
+checks the specific event's own `pointerType` (not just device capability),
+so a touch tap on a hybrid mouse+touchscreen device can't start a drag even
+though that device's `matchMedia` reports a fine pointer exists elsewhere on
+the machine.
+
+**Drag — direct pointer control, sign verified empirically.**
+`rotation.y += dx * DRAG_SENSITIVITY` (0.008 rad/px — a full 1440px-wide
+desktop drag is a little over one and a half turns). The sign was **not**
+derived from the camera setup and trusted — it was tested twice, the first
+attempt was wrong, and the fix for that first attempt was *also* wrong,
+which is recorded here because the failure mode is instructive:
+
+1. A first check read `spinner.rotation.y`'s sign before/after a drag and
+   compared it to the pointer's sign. That's the wrong test — reading
+   `rotation.y`'s sign confirms which way a NUMBER moved, not which way the
+   star's visible surface moved on screen, and this scene's own camera
+   handedness (already recorded in `starVideoRegions.js`: "screen-right at
+   rotation.y=0 corresponds to world -X, not +X") means those can differ.
+2. A second attempt projected a FIXED point on the mesh's local +X axis
+   before/after a drag. This is closer, but still unreliable: that point's
+   screen-sensitivity to rotation is `-r*sin(theta)`, which changes sign
+   every half turn depending on where in the rotation cycle the star
+   happens to currently be — a large single drag (or even a run of small
+   steps, if the star starts near an extremum) can cross that sign change
+   and produce a misleading reading. This test's result led to an incorrect
+   "fix" (negating the sign) that was reverted once the third method below
+   contradicted it.
+3. The test that actually settled it: raycast the REAL 3D point under the
+   cursor at grab time (the thing actually "held"), store it in the mesh's
+   own local space, drag, then re-project that SAME point and compare its
+   screen-X to the cursor's own screen-X. This has no phase-dependent
+   sign-flip problem, because it's always asking the one question that
+   actually matters — does the grabbed surface follow the cursor — rather
+   than reasoning about an arbitrary reference point's relationship to
+   rotation. Result: dragging the cursor 200px right moved the grabbed
+   point's screen-X from 719.5 to 816.5 (+97, following the cursor) with the
+   original, un-negated sign — confirming the very first implementation's
+   sign was correct all along, and the intermediate "fix" had been wrong.
+
+**Velocity estimation.** Each `pointermove` computes an instantaneous
+velocity (`dx * DRAG_SENSITIVITY / dt`, real elapsed time via
+`performance.now()`, floored at 1/240s to guard a possible zero/near-zero
+`dt`) and blends it into `dragVelocity` with `THREE.MathUtils.lerp(...,
+0.3)` rather than taking the single most recent sample raw — so the
+velocity handed to momentum on release reflects the drag's *recent* motion,
+not one noisy sample exactly at the moment of release, per the brief's own
+"recent pointer deltas" instruction.
+
+**Release -> momentum -> idle, as one continuous additive term, not a
+state-machine handoff.** On release, `momentumVelocity` is set to
+`clamp(dragVelocity * MOMENTUM_MULTIPLIER, -MAX_MOMENTUM_SPEED,
+MAX_MOMENTUM_SPEED)` (`MOMENTUM_MULTIPLIER = 1`, `MAX_MOMENTUM_SPEED =
+SPIN_SPEED * 6` — about 6x idle speed, clearly fast but not disorienting).
+From then on, every frame:
+
+```js
+const speed = SPIN_SPEED - hoverState.current.t * (SPIN_SPEED - HOVER_SPIN_SPEED); // unchanged Stage 3 formula
+momentumVelocity.current = THREE.MathUtils.damp(momentumVelocity.current, 0, MOMENTUM_DAMPING, delta);
+spinner.current.rotation.y += delta * (speed + momentumVelocity.current);
+```
+
+`speed` is the **exact, byte-for-byte** Stage 3 hover-aware idle formula —
+zero regression risk to the already-tuned/verified/committed hover feel.
+`momentumVelocity` is a separate residual "kick" that decays to exactly 0
+via `damp()` (`MOMENTUM_DAMPING = 1.2`, gentler than proximity tilt's
+`PROXIMITY_LAMBDA = 6` on purpose — a flung object gliding to a stop over a
+second or two is the "physical, not snappy" read the brief asks for). Once
+it's negligible, `speed + momentumVelocity` **is** `speed` again, with no
+separate handoff branch, no snap, and nothing that could discontinuously
+"jump back" to idle — the blend falls out of the additive structure for
+free. `momentumVelocity` starts at 0 on mount and stays there through
+ordinary idle/hover use, so none of this changes anything about the star's
+behavior until an actual drag has actually released some velocity into it.
+
+**Hover and proximity tilt compose for free, by construction, not by extra
+gating.** Hover (`hoverState`/`hoverGroup`, driven by the mesh's existing
+`onPointerOver`/`onPointerOut`) and proximity tilt (`pointerOverCanvas`/
+`proximityTilt.rotation.x`/`.z`) are untouched by this stage and read by the
+same `useFrame` as drag/momentum, but on different properties entirely
+(scale, and a *different* group's roll/pitch, respectively) — there is
+nothing for drag to fight there, confirmed rather than assumed (see
+verification below: proximity tilt kept responding to pointer position
+*during* an active drag, and hover scale read the identical Stage 3 value
+immediately after a drag/release cycle).
+
+**Cursor feedback — minimal, reusing the existing hover handlers.**
+`onPointerOver`/`onPointerOut` (already existing, unchanged in their tween
+logic) now also set `gl.domElement.style.cursor` to `"grab"`/`"auto"`,
+gated on the same `supportsProximityTilt()` check and skipped while a drag
+already has it set to `"grabbing"` (set in `handlePointerDown`, restored to
+`"grab"` or `"auto"` in the release handler depending on whether the pointer
+is still over the canvas).
+
+**Mobile/touch — no new mobile interaction system, deliberately.** Drag is
+gated behind the same `supportsProximityTilt()` check proximity tilt already
+uses, so touch devices get idle spin and ordinary hover (both pre-existing,
+unchanged) but no proximity tilt and no drag — one consistent "desktop
+mouse" tier rather than two slightly different gates for two different
+features. This was a deliberate scope decision, not an oversight: the
+Hero's `<figure>` Canvas is full-viewport (`inset-0`, `pointer-events-auto`
+— see `Hero.jsx`), so a touch-drag handler there would fight native page
+scrolling on any touch gesture starting over the star, exactly the
+"frustrating gesture conflict" the brief calls out to avoid. A safe
+touch-drag (via `touch-action` and careful pointer capture so scroll and
+drag can coexist) is materially larger scope than this stage's smallest-
+viable-architecture mandate, and the brief explicitly permits skipping it
+if it would make mobile worse.
+
+**Lifecycle safety.** A drag attaches its `pointermove`/`pointerup`/
+`pointercancel` listeners on `window` (a deliberate, temporary, actively-
+initiated exception to the "no window listener" pattern Stage 3.5
+established for *passive* proximity sensing — a drag is a different kind of
+thing, conventionally global for exactly as long as the pointer is held) and
+tears them down on release. A `dragCleanup` ref plus one `useEffect`'s
+unmount cleanup is the safety net for the unlikely case of unmounting mid-
+drag (a route change away from the homepage while still holding the star) —
+without it, that edge case would leak the window listeners.
+
+**Verified in the browser** (same headless-Chromium setup as every prior
+stage; `__THREE_DEVTOOLS__`-captured live scene reads for anything numeric,
+not screenshots alone):
+
+- **Drag sign**, decisively, via the raycast method described above: the
+  actual grabbed point followed the cursor (+97px screen-X for a +200px
+  drag). The two earlier, less reliable methods are recorded above rather
+  than deleted, because the failure mode (a phase-dependent reference point
+  giving an inconsistent answer) is worth keeping on record.
+- **Release continuity — exact, not approximate.** `rotation.y` read
+  identically immediately before and immediately after `pointerup`
+  (`jump: 0`) — confirming release never resets, snaps, or discontinues the
+  current angle, only what's being added to it going forward.
+- **Momentum direction and boundedness:** post-release sampling (both an
+  initial 1s-interval run and a follow-up 0.4s-interval run with the
+  release point moved clearly off the star, so the idle target is
+  unambiguous) showed rotation continuing to advance in a single consistent
+  direction — no reversal, no negative excursion — at no point exceeding a
+  sane bound relative to `MAX_MOMENTUM_SPEED`, and trending down toward the
+  idle rate rather than sustaining an elevated speed indefinitely.
+- **Cursor feedback:** `"grab"` on hover, `"grabbing"` on grab, back to
+  `"grab"` on release-while-still-hovering, `"auto"` once the pointer moves
+  away — all four states read correctly via `gl.domElement.style.cursor`.
+- **Hover compatibility, measured together, not asserted:** `hoverGroup.
+  scale.x` read `1.1592935720852509` — the exact Stage 3 value — both
+  immediately after a full grab/drag/release cycle and unchanged from
+  before, confirming zero regression.
+- **Proximity compatibility:** `proximityTilt.rotation.z` continued
+  responding to pointer position *while a drag was in progress*, confirming
+  the two systems share the frame without either blocking the other.
+- **Repeated rapid grab/release cycles** (4 cycles, alternating drag
+  direction, ~100ms apart): settled to finite, sane values with zero
+  console/page errors — no NaN, no runaway, no accumulation across cycles.
+- **Reverse-direction drag:** a leftward drag produced a decrease in
+  `rotation.y` (consistent, opposite-sign behavior to the rightward case).
+- **Touch/mobile gating, confirmed directly, not just via matchMedia.**
+  Under a CDP-forced `pointer: coarse`/`hover: none` environment, a
+  synthetic `pointerdown` -> `pointermove` -> `pointerup` sequence with
+  `pointerType: "touch"` dispatched straight on the canvas left
+  `rotation.y` at **exactly** its pre-touch value — proving the gate
+  actually prevents the drag from engaging at all, not merely that no
+  qualifying event happened to fire.
+- Zero console/page errors across every check (desktop dark, light,
+  mobile). Zero horizontal overflow. DOM `<video>` element count unchanged
+  (2). Light theme reproduced the identical `1.1592935720852509` hover
+  value, confirming theme-independence.
+- `npm run build` and `npm run lint` both pass clean.
+
+**Deliberate limitations**
+
+- **The fine-grained shape of the momentum decay curve is not cleanly
+  measurable in this sandbox.** By the time of this stage's verification,
+  this session's software-rendered Chromium had slowed further than the
+  ~2-3fps documented in Stage 2/3 (observed well under 1fps at points,
+  `rotation.y` sometimes frozen across several consecutive 400ms polls
+  before jumping once). Because `useFrame`'s `delta` is real elapsed time
+  and `damp()` is exact for any `dt`, the underlying decay math is sound
+  regardless of how sparse the frames are — but sampling a *smooth curve*
+  from such sparse, irregular frame timing isn't reliable, the same
+  category of sandbox-only artifact Stage 3's own tuning pass hit with
+  GSAP's lag smoothing. What WAS verified directly (direction, boundedness,
+  continuity, no reversal) is the set of properties that actually matter for
+  correctness; the exact "does it feel like ease-out over 1.2 seconds"
+  question is a real-hardware, real-browser judgment call, not a sandbox
+  measurement.
+- Vertical dragging was not implemented. The brief explicitly permitted
+  staying horizontal-only if a vertical term risked fighting proximity
+  tilt's own pitch axis or causing chaotic tumbling; horizontal-only avoids
+  that class of risk entirely rather than mitigating it, and the brief's own
+  framing ("not a generic 3D model viewer") supported the simpler choice.
+- Touch/coarse-pointer devices get no drag at all (see the mobile/touch
+  section above) — a deliberate scope decision given the risk of a
+  scroll/gesture conflict on the Hero's full-viewport Canvas, not an
+  oversight.
+- No cursor style change beyond `grab`/`grabbing`/`auto` — no custom cursor
+  system was added, matching the brief's own "keep this minimal" instruction
+  and Stage 3/3.5's precedent of not introducing new UI chrome.
+
+**Files changed**: `src/components/GeminiStar.jsx` only (`DRAG_SENSITIVITY`/
+`MOMENTUM_MULTIPLIER`/`MAX_MOMENTUM_SPEED`/`MOMENTUM_DAMPING` constants,
+`isDragging`/`dragVelocity`/`momentumVelocity`/`dragCleanup` refs, the
+unmount-safety `useEffect`, `handlePointerDown` and its window-scoped
+`onMove`/`onUp`, the cursor-feedback additions to the existing
+`handlePointerOver`/`handlePointerOut`, the priority gate and momentum term
+in `useFrame`, and `onPointerDown` wired onto the existing mesh). No new
+dependencies — `THREE.MathUtils.damp`/`.lerp`/`.clamp` and native
+`pointermove`/`pointerup`/`pointercancel` are already available from
+imports already in use.
+
+### Milestone — Gemini Hero, Stage 3.5: Proximity Tilt (Second Interaction)
+
+**Hover → it notices you** (Stage 3) is now followed by **move around it →
+it subtly responds**: as the pointer moves anywhere over the Hero's Canvas,
+the star leans a small amount toward it — roll for left/right, pitch for
+up/down — smoothly damped, and eases back to neutral the moment the pointer
+leaves. Dragging, momentum, and release-settle (the next two steps in the
+progression) are deliberately not started.
+
+**Architecture — an additional orientation layer, not a change to the
+cinematic spin.** A new `proximityTilt` group sits between `hoverGroup` and
+the `TILT_X` lean group — i.e. it is the **parent** of the lean/spinner
+subtree, not a child of it:
+
+```
+hoverGroup -> proximityTilt (NEW) -> TILT_X lean -> spinner -> mesh
+```
+
+That placement is load-bearing, for the same reason `TILT_X` is already the
+spinner's parent (see `TILT_X`'s own comment above it in `GeminiStar.jsx`):
+anything placed INSIDE the spinner would have its own axes rotate along with
+the turntable, so "pointer left" would point in a different physical
+direction at every phase of the spin and read as tumbling rather than
+leaning. Outside the spinner, in a stable frame, it composes cleanly as
+*base spin + tilt* — `rotation.y` is still only ever written by the existing
+idle/hover increment, and `proximityTilt` only ever writes its own
+`rotation.x`/`rotation.z`, so the two layers cannot fight or offset each
+other's phase.
+
+**Roll (Z) for left/right, pitch (X) for up/down — Y deliberately
+untouched.** A small Y-axis nudge was considered and rejected on the actual
+math: for a point near the star's tip (radius ~0.96, near the local X/Y
+plane), a *small* rotation about Y moves that point almost entirely in Z
+(toward/away from camera), not laterally — that's the mechanism the
+turntable already relies on for its width-varies/height-holds signature, but
+it means a small Y offset reads as depth, not as "leaning left/right" the
+way the brief describes. Roll/pitch on their own small, damped, transient
+layer are what actually produce that read, and are architecturally distinct
+from Stage 1's rejected *primary, continuous, full* Z-axis spin (which
+failed because the whole turntable lost its depth-revealing signature by
+turning on the view axis) — a few-degree transient nudge on a separate layer
+doesn't reintroduce that problem.
+
+**Pointer source — R3F's own Canvas-scoped state, no window listener.** R3F
+already updates `state.pointer` (NDC, -1..1) for the whole Canvas on every
+pointer move, independent of whether anything was actually hit by a
+raycast — so `useFrame` reads it directly, with no new event wiring and no
+risk of the "whole page tilts the star" failure mode a `window` listener
+would have introduced. What R3F does not do is clear `state.pointer` when
+the pointer leaves the canvas — it holds the last value — so a single extra
+signal, `pointerOverCanvas` (a ref, not React state), is tracked via native
+`pointerenter`/`pointerleave` listeners on `gl.domElement` itself, still
+scoped to the canvas rather than the window. The tilt's target is `0`
+whenever that ref is false, so leaving always eases back to neutral instead
+of freezing at its last position.
+
+**Smoothing — `THREE.MathUtils.damp`, not a window listener's raw value and
+not a hand-rolled lerp.** `damp(current, target, PROXIMITY_LAMBDA, delta)` is
+the frame-rate-independent exponential-decay form already available from the
+`THREE` import the file already has; using it instead of
+`current += (target - current) * constant` means the same visual lag holds
+regardless of the actual frame rate, consistent with how `SPIN_SPEED` is
+already `delta`-integrated rather than a fixed per-frame step.
+
+**One tunable pair, not scattered magic numbers.** `PROXIMITY_TILT_MAX`
+(0.12 rad, ~6.9°) caps the maximum lean in either direction on either axis;
+`PROXIMITY_LAMBDA` (6) sets the damping rate. Both are named constants at
+module scope alongside `SPIN_SPEED`/`HOVER_SCALE`, not inline numbers.
+
+**Mobile/touch — gated off entirely, not faked.** There is no pointer to be
+proximate to on a touch device, and synthesizing one from the last tap
+position would mean the tilt jerks to a corner and sticks there — worse
+than no effect. `supportsProximityTilt()` checks
+`(hover: hover) and (pointer: fine)` once, in the same mount-time `useEffect`
+that attaches the enter/leave listeners; on a device that fails that check,
+the listeners are never attached at all (an early return, not a runtime
+branch that could still fire), so `pointerOverCanvas` can never become true
+and the tilt provably cannot engage. **Reduced motion is gated the same way
+the idle spin already is** — continuous pointer-driven motion is the same
+class of thing `prefers-reduced-motion` is meant to suppress, so the target
+collapses to `0` under that setting too, consistent with the existing
+pattern rather than a new one-off branch.
+
+**Hover compatibility — no new state machine.** Hover (`hoverState`/
+`hoverGroup`) and proximity tilt (`pointerOverCanvas`/`proximityTilt`) are
+two independent refs read by the same `useFrame`, not a combined state
+machine — the star's material/pointer handlers are unchanged, so hovering
+still triggers the exact same scale-up and spin-slowdown as Stage 3 while
+the tilt keeps responding underneath it, with no interaction between the two
+beyond both existing in the same frame's render.
+
+**Verified in the browser** (same headless-Chromium setup as prior stages —
+`--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader`,
+`gsap.ticker.lagSmoothing(0)` on the app's own gsap singleton for
+measurement only — and via `__THREE_DEVTOOLS__`-captured live scene reads,
+not screenshots alone, for anything numeric):
+
+- **Direction and anti-symmetry**, read directly off `proximityTilt.rotation`:
+  pointer right of the star → `rotation.z ≈ -0.1008`; pointer left →
+  `rotation.z ≈ +0.1008` (exact mirror). Pointer above → `rotation.x ≈
+  +0.1008`; pointer below → `rotation.x ≈ -0.1008` (exact mirror). Magnitude
+  in all four cases matches the hand-derived prediction from
+  `PROXIMITY_TILT_MAX` and the tested pointer position almost exactly.
+- **Return to neutral on leave — exact, not approximate.** A real
+  `pointerleave` dispatched on the canvas element (the same event the app's
+  own listener listens for) brought `rotation.x`/`rotation.z` to
+  `2.6e-5`/`-1.1e-33` — floating-point zero. Re-entering and leaving a
+  second time reproduced the same exact-zero result, confirming the
+  enter/leave pair is not a one-shot listener bug.
+- **Rapid movement around the star (8 points on a circle, ~120ms dwell
+  each):** settled to a bounded, non-runaway value
+  (`rotation.x ≈ 0.038, rotation.z ≈ -0.018`, both well inside
+  `PROXIMITY_TILT_MAX`) with zero errors — no NaN, no explosion, consistent
+  with `damp()`'s own boundedness.
+- **Hover compatibility, measured together, not asserted:** with the pointer
+  directly on the star, `hoverGroup.scale.x` read `1.1592935720852509` —
+  the **exact same value** Stage 3's tuning pass measured, confirming zero
+  regression — while `proximityTilt` continued responding in the same
+  frame. Hover rotation speed (measured over an 8s window, not the
+  original, noisier 3s window a first pass tried) read **0.0593 rad/s**
+  against idle's **0.386 rad/s** measured the same way — a ratio of 0.154,
+  matching the tuned `HOVER_SPIN_SPEED = SPIN_SPEED * 0.15` target almost
+  exactly and confirming Stage 3's hover slowdown is unregressed by this
+  addition.
+- **Theme independence:** pointer-right/pointer-left measured under an
+  emulated light `colorScheme` reproduced the same `±0.1008` magnitudes as
+  dark — expected, since the tilt is a pure transform with no material
+  dependency, but confirmed rather than assumed.
+- **Mobile/touch gating, confirmed two ways, not one.** First, `matchMedia`
+  itself: forced via a CDP `Emulation.setEmulatedMedia` call *before*
+  navigation (context-level `hasTouch`/`isMobile` alone did not flip the
+  `hover`/`pointer` media features in this Chromium build — confirmed by a
+  first attempt that read `hover: hover` / `pointer: fine` as still `true`
+  under those flags alone) — `(hover: hover)` and `(pointer: fine)` both
+  read `false`, `(hover: none)` and `(pointer: coarse)` both read `true`.
+  Second, and more directly: even after dispatching a synthetic mouse move
+  across the canvas under that emulated environment,
+  `proximityTilt.rotation.x`/`.z` stayed at exactly `0` — proving the gate
+  actually prevents the listeners from ever attaching, not merely that no
+  qualifying event happened to fire.
+- Zero console/page errors across every check (desktop dark, light,
+  mobile).
+- Zero horizontal overflow at both 1440×900 desktop and 390×844 mobile.
+- DOM `<video>` element count unchanged (2) — Stage 2's video lifecycle is
+  untouched.
+- Screenshots (pointer left/right/above/below, dark desktop) were also
+  captured as a supplementary visual check: the star reads correctly as
+  glass with video content visible and legible at every pose, with no
+  distortion, corruption, or broken layering. These are **not** matched-pose
+  comparisons — the idle turntable keeps turning between captures, exactly
+  the same limitation Stage 3's own screenshot pairs recorded — so they
+  confirm nothing looks broken rather than proving the exact lean direction
+  pixel-for-pixel; the scene-graph rotation reads above are the rigorous
+  evidence for direction, magnitude, and return-to-neutral.
+- `npm run build` and `npm run lint` both pass clean.
+
+**Deliberate limitations**
+
+- `PROXIMITY_TILT_MAX` (0.12 rad, ~6.9°) and `PROXIMITY_LAMBDA` (6) are a
+  conservative starting point per the brief's own instruction, verified
+  against the actual rendered numbers above rather than left as a guess —
+  not re-tuned further this pass since nothing in verification suggested
+  they needed to be.
+- Damping was tuned for a real 60fps browser, not for this sandbox's
+  software-rendered ~2-3fps path. At that low a frame rate `delta` is large
+  enough that `damp()`'s exponential term is close to fully saturated most
+  frames, so the tilt will read as closer to instant in this sandbox's own
+  screenshots than it will on real hardware — the same class of caveat
+  Stage 3 already recorded for its own GSAP-lag-smoothing artifact, and,
+  like that one, it affects only how convincing a *sandbox measurement*
+  looks, not the shipped behavior on an actual browser.
+- Dragging, release momentum, and settle-back-to-cinematic-rotation are the
+  next two steps in the stated progression and are explicitly not started.
+- No cursor style change was added — not requested, out of this stage's
+  scope, matching Stage 3's own note on the same point.
+
+**Files changed**: `src/components/GeminiStar.jsx` only (`proximityTilt`
+ref and group, `pointerOverCanvas` ref, `supportsProximityTilt()` gate,
+`PROXIMITY_TILT_MAX`/`PROXIMITY_LAMBDA` constants, the `useEffect` wiring
+`pointerenter`/`pointerleave` on `gl.domElement`, and the new block in
+`useFrame`). No new dependencies — `THREE.MathUtils.damp` and R3F's own
+`state.pointer` are already available from imports already in use.
+
 ### Milestone — Gemini Hero, Stage 3: First Interaction (Hover)
 *(this milestone, tuned in a follow-up pass — see below)*
 

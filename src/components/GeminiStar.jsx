@@ -48,6 +48,62 @@ const SPIN_SPEED = (Math.PI * 2) / 16;
 const HOVER_SCALE = 1.18;
 const HOVER_SPIN_SPEED = SPIN_SPEED * 0.15;
 
+// Stage 3.5 — proximity tilt. "Hover -> it notices you" (Stage 3) is now
+// followed by "move around it -> it subtly responds": as the pointer moves
+// around the star, it leans a little toward it, like a lightweight physical
+// object suspended in space rather than a flat CSS card tilt.
+//
+// This is an ADDITIONAL orientation layer, not a change to the cinematic
+// spin: it lives on its own group OUTSIDE the spinner (see proximityTilt in
+// the JSX below), as the parent of the TILT_X lean rather than a child of
+// it. That placement matters for the same reason TILT_X itself is the
+// spinner's parent (see TILT_X's own comment) — anything INSIDE the spinner
+// would have its axes rotate with the spin, so "pointer left" would point in
+// a different physical direction at every phase of the turntable and read as
+// tumbling rather than leaning. Outside the spinner, the tilt sits in a
+// stable frame and composes as base spin + tilt, exactly as intended.
+//
+// Roll (Z) reads as left/right lean and pitch (X) as up/down tilt — the
+// spin's own Y axis is left completely untouched, so this can never fight or
+// offset the turntable's phase, and rotation.y is still only ever written by
+// the idle/hover increment above.
+const PROXIMITY_TILT_MAX = 0.12; // radians (~6.9 degrees) — conservative start, tuned against the render
+const PROXIMITY_LAMBDA = 6; // useFrame damping rate (THREE.MathUtils.damp) — gives the tilt a slight physical lag rather than 1:1 pointer tracking
+
+// Stage 4 — grab, drag, release, momentum. "Move around it -> it subtly
+// responds" (Stage 3.5) is now followed by "grab it -> you can rotate it."
+// Deliberately writes to the SAME spinner.rotation.y the idle/hover spin
+// already owns, rather than a new group: unlike proximity tilt (a genuinely
+// separate roll/pitch layer that has to compose additively), drag rotates
+// the exact same turntable the cinematic spin does, on the exact same axis
+// the brief requires — a second competing group here would just mean two
+// systems fighting over what "the star's current angle" means. Priority is
+// therefore a simple gate in useFrame (see below), not a second transform.
+//
+// DRAG_SENSITIVITY converts horizontal pointer movement directly to
+// rotation, in radians per pixel — chosen so a full-width desktop drag
+// (~1440px) reads as a little over a full turn (2*pi/0.008 ~= 785px per
+// revolution), controllable rather than either twitchy or numb.
+const DRAG_SENSITIVITY = 0.008;
+// After release, the recent drag velocity (already in rad/s, derived from
+// real pointer deltas over real elapsed time — see handlePointerDown) is
+// multiplied by this before becoming the initial momentum. Starts at 1:1 —
+// the raw measured velocity IS the physically correct initial spin — kept as
+// a named constant per the brief rather than folding it into
+// DRAG_SENSITIVITY, so momentum "punchiness" can be tuned independently of
+// how far a drag has to travel to rotate the star.
+const MOMENTUM_MULTIPLIER = 1;
+// A hard ceiling in rad/s so a very fast flick can't launch the star into an
+// absurd spin — about 6x idle speed, still a clearly fast spin but not
+// disorienting.
+const MAX_MOMENTUM_SPEED = SPIN_SPEED * 6;
+// THREE.MathUtils.damp rate controlling how quickly momentum decays back to
+// 0 (see momentumVelocity in useFrame) — a gentler rate than
+// PROXIMITY_LAMBDA on purpose, since a flung object gliding to a stop over
+// roughly a second or two is the "physical, not snappy" read the brief asks
+// for; PROXIMITY_LAMBDA's tilt is meant to feel closer to immediate.
+const MOMENTUM_DAMPING = 1.2;
+
 // Full revolutions performed during the entrance, while the star is still
 // falling. EASE.cinematic is heavily front-loaded (0.16, 1, 0.3, 1), so ~93%
 // of these turns are spent inside the drop's own 1.5s and the remainder
@@ -178,6 +234,15 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// There is no pointer to be proximate to on a touch device — trying to fake
+// one from touch position would mean the tilt jerks to wherever a finger
+// last tapped and sticks there, which is worse than no effect at all. Gating
+// on the same media features CSS itself uses for "a real hover-capable
+// pointer exists" keeps this a single check, not new touch-handling logic.
+const supportsProximityTilt = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
 // Crops a video texture to fill its target region without distorting the
 // footage's own aspect ratio — the three.js equivalent of CSS
 // `object-fit: cover`. Needed because each region's own geometric aspect
@@ -305,6 +370,25 @@ export function GeminiStar({ scale = 1, ...props }) {
   // the tweened value, the render loop owns applying it to the scene).
   const hoverGroup = useRef(null);
   const hoverState = useRef({ t: 0 });
+  // proximityTilt: written imperatively every frame like hoverGroup above,
+  // never through React state. pointerOverCanvas tracks whether the pointer
+  // is actually inside the Hero's Canvas right now (R3F keeps `state.pointer`
+  // at its last value after the pointer leaves, so without this the tilt
+  // would freeze at its last position instead of returning to neutral).
+  const proximityTilt = useRef(null);
+  const pointerOverCanvas = useRef(false);
+  // Stage 4 drag state. isDragging gates useFrame's own rotation.y write
+  // (see below) so the two never both touch it in the same frame.
+  // dragVelocity is a live estimate (rad/s) blended from recent pointer
+  // deltas while dragging; momentumVelocity is what's left of that estimate
+  // after release, decaying to 0 every frame via THREE.MathUtils.damp.
+  // dragCleanup holds whatever the active drag's own teardown function is,
+  // purely so an unmount mid-drag (e.g. a route change) can't leak the
+  // window-level listeners a drag temporarily attaches.
+  const isDragging = useRef(false);
+  const dragVelocity = useRef(0);
+  const momentumVelocity = useRef(0);
+  const dragCleanup = useRef(null);
   const { nodes } = useGLTF(GLB_PATH);
   const material = MATERIAL[useIsDarkTheme() ? "dark" : "light"];
 
@@ -316,7 +400,42 @@ export function GeminiStar({ scale = 1, ...props }) {
   // resize) fixes that at every aspect ratio instead of guessing a second
   // magic number per breakpoint, and it can only ever shrink the caller's
   // requested scale, never inflate it.
-  const { viewport } = useThree();
+  const { viewport, gl } = useThree();
+
+  // R3F already updates state.pointer (NDC, -1..1) for the whole Canvas on
+  // every pointer move, independent of whether anything was hit — no window
+  // listener needed, so the interaction area is exactly the Hero's own
+  // pointer-events-auto Canvas (see Hero.jsx) and nothing wider. What R3F
+  // does NOT do is tell us when the pointer has left the canvas entirely, so
+  // that one signal is tracked here via native events on the canvas element
+  // itself (still scoped to the canvas, not window).
+  useEffect(() => {
+    if (!supportsProximityTilt()) return;
+    const el = gl.domElement;
+    const onEnter = () => {
+      pointerOverCanvas.current = true;
+    };
+    const onLeave = () => {
+      pointerOverCanvas.current = false;
+    };
+    el.addEventListener("pointerenter", onEnter);
+    el.addEventListener("pointerleave", onLeave);
+    return () => {
+      el.removeEventListener("pointerenter", onEnter);
+      el.removeEventListener("pointerleave", onLeave);
+    };
+  }, [gl]);
+
+  // Safety net for the rare case of unmounting (e.g. a route change) while
+  // a drag is still in progress: handlePointerDown below attaches its own
+  // window-level listeners for the lifetime of one drag and tears them down
+  // on pointerup/pointercancel, but an unmount skips straight past that —
+  // this is the only other place those listeners can be removed from.
+  useEffect(() => {
+    return () => {
+      if (dragCleanup.current) dragCleanup.current();
+    };
+  }, []);
 
   // Two caps against the frame's own edges, smallest wins. Neither knows
   // anything about the copy — overlapping it is intended.
@@ -442,6 +561,12 @@ export function GeminiStar({ scale = 1, ...props }) {
       ease: EASE.precise,
       overwrite: true,
     });
+    // Minimal cursor feedback that the star is grabbable — only worth
+    // showing on the same devices drag is actually available on, and never
+    // while a drag already has the canvas set to "grabbing".
+    if (supportsProximityTilt() && !isDragging.current) {
+      gl.domElement.style.cursor = "grab";
+    }
   };
   const handlePointerOut = (event) => {
     event.stopPropagation();
@@ -451,6 +576,93 @@ export function GeminiStar({ scale = 1, ...props }) {
       ease: EASE.precise,
       overwrite: true,
     });
+    if (!isDragging.current) {
+      gl.domElement.style.cursor = "auto";
+    }
+  };
+
+  // Grab. Gated the same way proximity tilt is (a real hover-capable,
+  // fine pointer) — touch is left alone deliberately: the Hero's Canvas is
+  // full-viewport (see Hero.jsx), so a touch-drag handler here would fight
+  // native page scrolling on any touch starting over the star, exactly the
+  // "frustrating gesture conflict" the brief warns against avoiding. Also
+  // checks the actual event's own pointerType, not just device capability,
+  // so a touch tap on a hybrid mouse+touchscreen device still can't start a
+  // drag even though that device's matchMedia reports a fine pointer exists.
+  // Also gated on entranceDone: the entrance GSAP tween is still writing
+  // spinner.rotation.y directly at that point (see the useGSAP block above),
+  // so grabbing before it hands off would mean two systems fighting over
+  // the same property, exactly what Stage 4 is required not to do.
+  const handlePointerDown = (event) => {
+    if (!entranceDone.current || !supportsProximityTilt() || isDragging.current) {
+      return;
+    }
+    const pointerType =
+      event.pointerType || (event.nativeEvent && event.nativeEvent.pointerType);
+    if (pointerType && pointerType !== "mouse" && pointerType !== "pen") return;
+    event.stopPropagation();
+
+    isDragging.current = true;
+    dragVelocity.current = 0;
+    gl.domElement.style.cursor = "grabbing";
+
+    let lastX = event.nativeEvent ? event.nativeEvent.clientX : event.clientX;
+    let lastT = performance.now();
+
+    // Direct pointer control: rotation.y is written HERE, immediately, on
+    // every real pointermove, not sampled once per rendered frame — under
+    // this project's own documented low-fps sandbox that distinction
+    // matters (see the Stage 3 tuning pass's lag-smoothing note), and on a
+    // real 60fps browser it's simply the most responsive a drag can feel.
+    // useFrame's own rotation.y write is skipped for as long as
+    // isDragging.current is true (see useFrame below), so the two can never
+    // both touch it in the same frame.
+    const onMove = (moveEvent) => {
+      const now = performance.now();
+      const dt = Math.max((now - lastT) / 1000, 1 / 240);
+      const dx = moveEvent.clientX - lastX;
+      // Sign verified empirically, not derived: raycasting the actual 3D
+      // point under the cursor at grab time, then re-projecting that SAME
+      // point after a drag, confirms this sign makes the grabbed surface
+      // follow the cursor. (A fixed local-axis reference point was tried
+      // first and gave an inconsistent/misleading reading — its own
+      // screen-sensitivity to rotation flips sign every half turn depending
+      // on the star's current phase, which a raycasted "the point actually
+      // under the cursor" reference doesn't have a problem with.)
+      if (spinner.current) {
+        spinner.current.rotation.y += dx * DRAG_SENSITIVITY;
+      }
+      // Blended (not raw-instantaneous) so the velocity handed to momentum
+      // on release reflects the drag's recent motion rather than one noisy
+      // sample right at the moment of release.
+      const instVelocity = (dx * DRAG_SENSITIVITY) / dt;
+      dragVelocity.current = THREE.MathUtils.lerp(
+        dragVelocity.current,
+        instVelocity,
+        0.3
+      );
+      lastX = moveEvent.clientX;
+      lastT = now;
+    };
+
+    const onUp = () => {
+      isDragging.current = false;
+      momentumVelocity.current = THREE.MathUtils.clamp(
+        dragVelocity.current * MOMENTUM_MULTIPLIER,
+        -MAX_MOMENTUM_SPEED,
+        MAX_MOMENTUM_SPEED
+      );
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      dragCleanup.current = null;
+      gl.domElement.style.cursor = pointerOverCanvas.current ? "grab" : "auto";
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    dragCleanup.current = onUp;
   };
 
   // Continuous resting spin, independent of the entrance timeline so it
@@ -465,19 +677,63 @@ export function GeminiStar({ scale = 1, ...props }) {
   // continuous motion, so it isn't what reduced-motion is meant to
   // suppress) — hoverGroup exists purely so this can be written every
   // frame without going through a React re-render.
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (hoverGroup.current) {
       hoverGroup.current.scale.setScalar(
         1 + hoverState.current.t * (hoverScaleMultiplier - 1)
       );
     }
 
+    // Proximity tilt: independent of the entranceDone gate below (a visitor
+    // moving the pointer during the entrance should still get a response),
+    // but gated the same way idle spin is on prefers-reduced-motion — this
+    // is continuous pointer-driven motion, the same class useFrame's own
+    // spin increment already treats as motion to suppress. Target resets to
+    // exactly 0 whenever the pointer isn't actively over the canvas, so
+    // damp() always eases back to neutral instead of freezing at its last
+    // value.
+    if (proximityTilt.current) {
+      const active = pointerOverCanvas.current && !prefersReducedMotion();
+      const targetTiltZ = active ? -state.pointer.x * PROXIMITY_TILT_MAX : 0;
+      const targetTiltX = active ? state.pointer.y * PROXIMITY_TILT_MAX : 0;
+      proximityTilt.current.rotation.z = THREE.MathUtils.damp(
+        proximityTilt.current.rotation.z,
+        targetTiltZ,
+        PROXIMITY_LAMBDA,
+        delta
+      );
+      proximityTilt.current.rotation.x = THREE.MathUtils.damp(
+        proximityTilt.current.rotation.x,
+        targetTiltX,
+        PROXIMITY_LAMBDA,
+        delta
+      );
+    }
+
     if (!entranceDone.current || prefersReducedMotion()) return;
+    // While dragging, handlePointerDown's own window pointermove listener
+    // is the ONLY thing writing spinner.rotation.y (see above) — skipping
+    // it here is what gives drag priority without a second competing
+    // rotation system.
+    if (isDragging.current) return;
     // Only the per-frame INCREMENT changes with hover — rotation.y itself
     // is never touched here, so the current angle is always preserved and
     // there is nothing to snap or reset on hover/leave.
     const speed = SPIN_SPEED - hoverState.current.t * (SPIN_SPEED - HOVER_SPIN_SPEED);
-    spinner.current.rotation.y += delta * speed;
+    // Momentum is a separate, purely additive term that decays to exactly 0
+    // via damp() — never to the idle speed directly — so "blend back into
+    // idle" falls out for free: once momentumVelocity is negligible,
+    // speed + momentumVelocity IS speed, with no separate handoff branch and
+    // nothing to snap. It starts at 0 (set on mount) and stays there
+    // through ordinary idle/hover use, so this is a no-op until a drag
+    // actually releases some velocity into it.
+    momentumVelocity.current = THREE.MathUtils.damp(
+      momentumVelocity.current,
+      0,
+      MOMENTUM_DAMPING,
+      delta
+    );
+    spinner.current.rotation.y += delta * (speed + momentumVelocity.current);
   });
 
   return (
@@ -491,23 +747,35 @@ export function GeminiStar({ scale = 1, ...props }) {
               appliedScale's own React-driven value — the two multiply
               naturally through normal Three.js parent/child transforms. */}
           <group ref={hoverGroup}>
-            {/* Horizontal turntable. The lean is the PARENT and the spinner is
-                its child, so the spin axis is the leaned vertical rather than
-                the camera's view axis: the star turns like a thin physical
-                object standing on a slightly raked platter. Its up-vector is
-                constant under a Y rotation and only the fixed lean acts on it,
-                which is what holds the top and bottom points steady while the
-                left and right points swing toward and away from the viewer.
-  
-                The face therefore sweeps through front-facing -> angled ->
-                edge-on -> angled -> front-facing once per half turn, and the
-                silhouette narrowing at edge-on is the intended read, not an
-                artefact: it is what makes the object's real depth visible.
-                (An earlier pass spun this on the view axis instead, which kept
-                a constant silhouette but made the star read as a flat 2D mark
-                rotating on its face — the opposite of what this needs.) */}
-            <group rotation={[TILT_X, 0, 0]}>
-              <group ref={spinner}>
+            {/* Stage 4 proximity tilt (roll/pitch, written imperatively in
+                useFrame above): the OUTER-most orientation layer, parent of
+                the TILT_X lean rather than a child of the spinner, so it
+                composes as base spin + tilt in a stable frame instead of its
+                axes rotating with the turntable — see PROXIMITY_TILT_MAX's
+                own comment for why that placement is load-bearing. */}
+            <group ref={proximityTilt}>
+              {/* Stage 4 grab/drag/momentum (see DRAG_SENSITIVITY etc. above):
+                  writes rotation.y on the SAME spinner group the idle/hover
+                  spin already owns, not a new layer — see the useFrame block
+                  below for why one shared property with a priority gate is
+                  correct here, unlike proximity tilt's separate group. */}
+              {/* Horizontal turntable. The lean is the PARENT and the spinner is
+                  its child, so the spin axis is the leaned vertical rather than
+                  the camera's view axis: the star turns like a thin physical
+                  object standing on a slightly raked platter. Its up-vector is
+                  constant under a Y rotation and only the fixed lean acts on it,
+                  which is what holds the top and bottom points steady while the
+                  left and right points swing toward and away from the viewer.
+
+                  The face therefore sweeps through front-facing -> angled ->
+                  edge-on -> angled -> front-facing once per half turn, and the
+                  silhouette narrowing at edge-on is the intended read, not an
+                  artefact: it is what makes the object's real depth visible.
+                  (An earlier pass spun this on the view axis instead, which kept
+                  a constant silhouette but made the star read as a flat 2D mark
+                  rotating on its face — the opposite of what this needs.) */}
+              <group rotation={[TILT_X, 0, 0]}>
+                <group ref={spinner}>
                 {/* White glass by reflection, not by transmission. Real
                     `transmission` was tried and rejected on the render, not
                     on theory: the Canvas is transparent and nothing sits
@@ -551,6 +819,7 @@ export function GeminiStar({ scale = 1, ...props }) {
                   geometry={regionGeometry}
                   onPointerOver={handlePointerOver}
                   onPointerOut={handlePointerOut}
+                  onPointerDown={handlePointerDown}
                 >
                   {slots.map((slot) => {
                     const entry = videoEntries[slot.materialIndex] || {
@@ -600,6 +869,7 @@ export function GeminiStar({ scale = 1, ...props }) {
                     opacity={material.opacity}
                   />
                 </mesh>
+              </group>
               </group>
             </group>
           </group>
