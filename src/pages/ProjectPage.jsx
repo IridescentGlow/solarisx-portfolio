@@ -12,6 +12,7 @@ import ThemeToggle from "../components/ThemeToggle";
 import { isVideo } from "../lib/media";
 import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
 import { ReelIntro } from "../components/reel/ReelIntro";
+import { BentoSection } from "../components/beu/BentoSection";
 
 // Third art-direction pass. The first two rounds treated each case-study
 // section as its own centred (or asymmetric-but-still-boxed) container —
@@ -564,6 +565,14 @@ const ProjectPage = () => {
           </div>
         </div>
       )}
+
+      {/* BeU Delivery — scroll-driven bento assembly (src/components/beu/).
+          Data-driven via project.beuBento (constants/index.js), rendered
+          between ReelIntro/the Media block above and the shared chapter
+          stack below — its own section, not part of the Craft chapter,
+          since Craft's featured-frame/gallery layout is shared with
+          MediHelp and this needed its own scroll-jacked real estate. */}
+      {project.beuBento && <BentoSection />}
 
       {/* ============ CHAPTER STACK: Challenge → Approach → Craft ============
           One continuous sequence, not three sticky sections that happen to

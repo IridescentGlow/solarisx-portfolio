@@ -165,6 +165,13 @@ export const projects = [
     // isVideo() extension check) rather than a hardcoded slug check, so a
     // future project could opt into the same treatment by setting this.
     cinematicIntro: true,
+    // Opts this project into BentoSection (src/components/beu/) — the BeU
+    // Delivery scroll-driven bento assembly — rendered between ReelIntro and
+    // the shared Challenge/Approach/Craft chapter stack. Its own flag,
+    // separate from cinematicIntro, for the same reason that one is
+    // data-driven rather than a hardcoded slug check: a future project could
+    // opt in independently of whether it also uses the cinematic reel intro.
+    beuBento: true,
   },
   {
     id: 2,
