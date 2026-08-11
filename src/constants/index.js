@@ -120,9 +120,51 @@ export const projects = [
     liveHref: "https://ytjobs.co/talent/profile/273483",
     repoHref: "",
     image: "/assets/projects/reel.mp4",
+    // ffmpeg-extracted frame from reel.mp4 itself (same technique used for
+    // MediHelp's poster) — MainReel.jsx's <video> above the fold needs one
+    // per PROJECT_PAGE_SYSTEM.md §6.
+    poster: "/assets/projects/reel-poster.jpg",
     bgImage: "/assets/backgrounds/map.jpg",
     featured: true,
-    caseStudy: null,
+    // Structural placeholder content — NOT real case-study copy. Every
+    // `text` value below is explicitly bracketed "[PLACEHOLDER — ...]" so
+    // it cannot be mistaken for a real claim if it ever renders; each one
+    // states exactly what real input is still needed. This exists to
+    // build and verify the chapter-stack layout/motion (PROJECT_STATUS.md
+    // §21) against real content-shaped text, not to ship as final copy.
+    // Sourced from nothing (no docs/case-studies/SIGNATURE_REEL.md exists,
+    // unlike MediHelp's sourced-from-doc convention) — see PROJECT_STATUS.md
+    // for the exact list of what's missing. No `gallery` (no real stills
+    // exist beyond the reel/clips already shown in the intro) and no
+    // `award` (none exists) — both omitted rather than invented.
+    caseStudy: {
+      challenge: {
+        text: "[PLACEHOLDER — CHALLENGE] What was this reel actually made for — a portfolio submission, a specific ask, a personal showcase? What problem was it solving: proving range across styles, condensing a body of work into a tight runtime, something else? Replace with the real brief/goal.",
+      },
+      approach: {
+        text: "[PLACEHOLDER — APPROACH] How were the specific clips chosen for this cut? What pacing, rhythm, music, or tone decisions shaped the edit? Replace with the real process.",
+        challenges:
+          "[PLACEHOLDER — WHERE IT GOT HARD] What was the hardest part of assembling this cut — pacing across very different source styles, sourcing usable footage, something else? Replace with a real, specific obstacle.",
+      },
+      craft: {
+        development:
+          "[PLACEHOLDER — CRAFT] What did the actual edit/grade/sound workflow look like beyond the tool list above (Premiere Pro, After Effects, DaVinci Resolve)? Any specific technique worth naming? Replace with real production detail.",
+        myRole:
+          "[PLACEHOLDER — MY ROLE] Solo edit, or does it include collaborators (colorist, sound designer, etc.)? Replace with the real role breakdown.",
+      },
+      result: {
+        text: "[PLACEHOLDER — RESULT] Where is this reel actually used, and what came of it — job outreach, a platform, a concrete reach number? No real outcome exists in this repo yet; replace with a real, verifiable result rather than an invented metric.",
+      },
+      credits: {
+        text: "[PLACEHOLDER — CREDITS] Solo work, or made with collaborators who should be named? Replace with accurate credit information.",
+      },
+    },
+    // Opts this project into ReelIntro (src/components/reel/) in place of
+    // ProjectPage.jsx's default Overview header + Media block. Data-driven
+    // per the file's own established convention (caseStudy truthiness,
+    // isVideo() extension check) rather than a hardcoded slug check, so a
+    // future project could opt into the same treatment by setting this.
+    cinematicIntro: true,
   },
   {
     id: 2,

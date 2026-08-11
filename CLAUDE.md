@@ -117,3 +117,12 @@ Always:
 - summarize every modified file
 
 Never claim something works unless it has been verified.
+
+
+## Status file usage
+- Do not read PROJECT_STATUS.md or docs/CHANGELOG_ARCHIVE.md in full unless explicitly asked.
+- On session start, only PROJECT_STATUS.md's summary should be in context (small, safe to read).
+- When told "update status": edit only the relevant row/section of PROJECT_STATUS.md's current-state
+  tables — do not append verbose changelog entries there.
+- When told "log this milestone" or "archive this": append a new dated entry to
+  docs/CHANGELOG_ARCHIVE.md with full detail, and update PROJECT_STATUS.md's summary in one line.

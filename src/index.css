@@ -134,6 +134,29 @@
     }
   }
 
+  /* Signature Reel's 2D star field (StarField2D.jsx) — continuous idle
+     spin + drift, always running on the compositor thread (transform-only
+     keyframes) so N stars cost nothing beyond one GSAP-driven position/
+     scale per star. Per-star duration/delay/drift distance vary via inline
+     style (see StarField2D.jsx), not separate keyframes, so variety comes
+     from data, not more CSS. */
+  --animate-star-spin: star-spin 16s linear infinite;
+  @keyframes star-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  --animate-star-drift: star-drift 10s ease-in-out infinite;
+  @keyframes star-drift {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(var(--star-drift-x, 6px), var(--star-drift-y, -6px));
+    }
+  }
+
   /* ------------------------------------------------------------------ */
   /* Solarisx canonical design tokens — ported from                     */
   /* docs/design/DESIGN_SYSTEM_TOKENS.md (v1.0). Additive: the legacy   */
@@ -232,7 +255,7 @@
   --duration-revelation: 1200ms;
 
   /* §5 Surface & elevation. Note: these override Tailwind's default    */
-  /* --shadow-*/--radius-* scales by design (the system's own values).  */
+  /* --shadow-* and --radius-* scales by design (the system's own values). */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);

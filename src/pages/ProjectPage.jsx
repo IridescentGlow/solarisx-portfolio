@@ -11,6 +11,7 @@ import Marquee from "../components/Marquee";
 import ThemeToggle from "../components/ThemeToggle";
 import { isVideo } from "../lib/media";
 import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
+import { ReelIntro } from "../components/reel/ReelIntro";
 
 // Third art-direction pass. The first two rounds treated each case-study
 // section as its own centred (or asymmetric-but-still-boxed) container —
@@ -123,7 +124,17 @@ const ProjectPage = () => {
   // into view — a small delay lets it follow the header rather than
   // competing with it.
   useGSAP(() => {
-    if (!metadataRef.current || !mediaRef.current) return;
+    // cinematicIntro projects (ReelIntro) render mediaRef's block, so that
+    // half of this guard is real. metadataRef (role/year/stack) is NOT
+    // skipped for them — ProjectPage.jsx renders it unconditionally,
+    // several viewports below ReelIntro's own scroll-jacked section — so
+    // this mount-delay tween still fires and finishes while the row is
+    // offscreen, producing no visible entrance by the time a visitor
+    // scrolls to it. Known, deferred: this page's MOTION scope is
+    // structure/layout only; a scroll-triggered version of this tween for
+    // cinematicIntro projects is the fix, tracked as follow-up motion work
+    // rather than done here.
+    if (!metadataRef.current) return;
     const tl = gsap.timeline({ delay: 0.6 });
     tl.from(metadataRef.current, {
       y: 40,
@@ -131,27 +142,29 @@ const ProjectPage = () => {
       duration: DURATION.reveal,
       ease: EASE.cinematic,
     });
-    tl.from(
-      mediaRef.current,
-      { y: 40, opacity: 0, duration: DURATION.reveal, ease: EASE.cinematic },
-      "<+0.2"
-    );
+    if (mediaRef.current) {
+      tl.from(
+        mediaRef.current,
+        { y: 40, opacity: 0, duration: DURATION.reveal, ease: EASE.cinematic },
+        "<+0.2"
+      );
 
-    // Subtle receding-depth cue as Media is scrolled past and Challenge
-    // arrives — the same technique About.jsx uses on itself (scale 0.95,
-    // scrubbed, power1.inOut): a continuous scrub effect, not a discrete
-    // "reveal," so it sits outside the four canonical reveal curves the
-    // same way About's own version does.
-    gsap.to(mediaRef.current, {
-      scale: 0.97,
-      scrollTrigger: {
-        trigger: mediaRef.current,
-        start: "bottom 70%",
-        end: "bottom 20%",
-        scrub: true,
-      },
-      ease: "power1.inOut",
-    });
+      // Subtle receding-depth cue as Media is scrolled past and Challenge
+      // arrives — the same technique About.jsx uses on itself (scale 0.95,
+      // scrubbed, power1.inOut): a continuous scrub effect, not a discrete
+      // "reveal," so it sits outside the four canonical reveal curves the
+      // same way About's own version does.
+      gsap.to(mediaRef.current, {
+        scale: 0.97,
+        scrollTrigger: {
+          trigger: mediaRef.current,
+          start: "bottom 70%",
+          end: "bottom 20%",
+          scrub: true,
+        },
+        ease: "power1.inOut",
+      });
+    }
   }, [project]);
 
   // Remaining manual sub-headings (My Role / Where It Got Hard / Credits) —
@@ -443,18 +456,32 @@ const ProjectPage = () => {
 
       {/* Overview — required section. Fires on mount (withScrollTrigger
           false): the page opens already at the top with this in view, same
-          situation as Hero on the homepage, not a "scroll into view" case. */}
-      <AnimatedHeaderSection
-        subTitle="Case Study"
-        title={titleMain}
-        text={titleQualifier || ""}
-        textColor="text-ink"
-        withScrollTrigger={false}
-        // The qualifier ("Award Winning Solution") is a highlighted
-        // achievement, not routine header copy — see the gold-shimmer-text
-        // utility in index.css for why this is the one place it's used.
-        textClassName={titleQualifier ? "gold-shimmer-text" : ""}
-      />
+          situation as Hero on the homepage, not a "scroll into view" case.
+
+          cinematicIntro projects (currently: Signature Reel) replace this
+          entire header + outcome + Media sequence with ReelIntro — a
+          homepage-Hero-styled, swapped-composition opening that itself
+          establishes identity, carries a static 3D video constellation into
+          a scroll-driven flythrough, and ends with the project's own hero
+          media (the reel) arriving and enlarging — rather than the generic
+          static header + framed clip every other project page uses. Every
+          other project renders byte-identically to before this branch was
+          added, since `project.cinematicIntro` is undefined for them. */}
+      {project.cinematicIntro ? (
+        <ReelIntro project={project} />
+      ) : (
+        <AnimatedHeaderSection
+          subTitle="Case Study"
+          title={titleMain}
+          text={titleQualifier || ""}
+          textColor="text-ink"
+          withScrollTrigger={false}
+          // The qualifier ("Award Winning Solution") is a highlighted
+          // achievement, not routine header copy — see the gold-shimmer-text
+          // utility in index.css for why this is the one place it's used.
+          textClassName={titleQualifier ? "gold-shimmer-text" : ""}
+        />
+      )}
 
       {/* Metadata — role/year sit opposite the stack on desktop, stack
           beneath on mobile (§8's explicit rule). */}
@@ -479,11 +506,21 @@ const ProjectPage = () => {
           --text-body-lg for case-study long-form, not the header's display
           type. AnimatedTextLines per §5's own component table ("staggered
           paragraph reveal"); a single unbroken string still gets the fade,
-          just without a multi-line stagger since there's only one line. */}
-      <AnimatedTextLines
-        text={project.outcome}
-        className="max-w-[65ch] px-10 mt-10 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
-      />
+          just without a multi-line stagger since there's only one line.
+
+          Skipped for cinematicIntro projects: signature-reel's own
+          `outcome` is still the literal, self-labeled "Placeholder — ..."
+          string (see src/constants/index.js and PROJECT_STATUS.md) —
+          shipping visible "Placeholder —" copy on the live page reads as
+          broken, not honest, so it's omitted here rather than displayed.
+          The metadataRef block above (role/year/stack, real data) still
+          renders unconditionally for every project, including this one. */}
+      {!project.cinematicIntro && (
+        <AnimatedTextLines
+          text={project.outcome}
+          className="max-w-[65ch] px-10 mt-10 space-y-5 text-body-lg text-[var(--color-text-secondary)]"
+        />
+      )}
 
       {/* Media — required section, the visual centrepiece (§1, §6). Framed
           rather than true edge-to-viewport bleed: this clip's own background
@@ -496,30 +533,37 @@ const ProjectPage = () => {
           below so it lands as a held shot instead of a thumbnail. The border
           treatment is unchanged: §6's framing decision was about this clip's
           light background fighting the dark theme, which is a question of
-          the frame, not of scale. */}
-      <div ref={mediaRef} className="px-10 mt-24 md:mt-40">
-        <div className="max-w-7xl mx-auto overflow-hidden border-8 rounded-lg shadow-lg border-[var(--color-border)]">
-          {isVideo(project.image) ? (
-            <video
-              src={project.image}
-              poster={project.poster}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              aria-label={`${project.name} preview`}
-              className="object-cover w-full aspect-video"
-            />
-          ) : (
-            <img
-              src={project.image}
-              alt={`${project.name} preview`}
-              className="object-cover w-full aspect-video"
-            />
-          )}
+          the frame, not of scale.
+
+          Skipped for cinematicIntro projects: ReelIntro's own MainReel
+          renders the project's hero media itself (arriving small, then
+          enlarging), so this generic static frame would be a redundant
+          second copy of the same clip. */}
+      {!project.cinematicIntro && (
+        <div ref={mediaRef} className="px-10 mt-24 md:mt-40">
+          <div className="max-w-7xl mx-auto overflow-hidden border-8 rounded-lg shadow-lg border-[var(--color-border)]">
+            {isVideo(project.image) ? (
+              <video
+                src={project.image}
+                poster={project.poster}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label={`${project.name} preview`}
+                className="object-cover w-full aspect-video"
+              />
+            ) : (
+              <img
+                src={project.image}
+                alt={`${project.name} preview`}
+                className="object-cover w-full aspect-video"
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ============ CHAPTER STACK: Challenge → Approach → Craft ============
           One continuous sequence, not three sticky sections that happen to
