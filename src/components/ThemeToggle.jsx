@@ -11,6 +11,14 @@ import { applyTheme, resolveTheme, storeTheme } from "../lib/theme";
 // `className` carries only positioning, because the two call sites need
 // different corners: on the home page the burger already owns the top-right,
 // so this sits to its left; on a project page the corner is free.
+//
+// Fixed to the viewport, so whatever the page scrolls underneath it — a
+// marquee word, a heading, the About portrait — passes directly behind this
+// corner at some point; there's no reserved gutter for it anywhere in the
+// page content. Resting at partial opacity with a light blur lets that
+// content stay visible-through (a deliberate layering read) instead of
+// being hard-clipped by an opaque circle; hovering/focusing brings it to
+// full opacity so the control itself never gets harder to see or use.
 const ThemeToggle = ({ className = "" }) => {
   // index.html has already resolved and applied the theme before paint; this
   // reads that decision back rather than re-deciding it, so React never
@@ -56,7 +64,7 @@ const ThemeToggle = ({ className = "" }) => {
       onClick={toggle}
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       title={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      className={`fixed z-50 flex items-center justify-center rounded-full cursor-pointer bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] w-11 h-11 md:w-14 md:h-14 transition-colors duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${className}`}
+      className={`fixed z-50 flex items-center justify-center rounded-full cursor-pointer backdrop-blur-sm bg-[var(--color-surface-2)]/70 hover:bg-[var(--color-surface-2)] focus-visible:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] w-11 h-11 md:w-14 md:h-14 transition-[color,background-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${className}`}
     >
       {/* Both icons are always mounted and cross-faded on opacity/rotation
           rather than swapped, so there is no layout shift and no pop. The
