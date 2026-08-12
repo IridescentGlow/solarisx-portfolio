@@ -7,41 +7,47 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="theme-color" content="#0B0A09" />
 
-    <title>Dagim Demissie — Visual Storyteller & Creative Technologist</title>
+    <meta name="author" content="Dagim Demissie" />
+
+    <!-- Share metadata. Everything between the markers is REPLACED PER ROUTE
+         at build time by scripts/prerender-meta.mjs, from the single source of
+         truth in src/lib/seo.js — do not hand-edit the copy here, edit that.
+         What is written below is the home route's output, which is what the
+         dev server (and any route with no pre-rendered file) serves; the
+         runtime hook in src/lib/useDocumentMeta.js corrects it on client-side
+         navigation. Removing the markers fails the build deliberately.
+         og:url and canonical are absent because no deployment origin exists
+         yet — set SITE_URL in src/lib/seo.js and both start being emitted. -->
+    <!-- seo:start -->
+    <title>Dagim Demissie — Visual Storyteller &amp; Creative Technologist</title>
     <meta
       name="description"
       content="I combine storytelling, visual design and technology to build experiences people remember. Editing, motion design, and interactive work."
     />
-    <meta name="author" content="Dagim Demissie" />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Solarisx" />
     <meta
       property="og:title"
-      content="Dagim Demissie — Visual Storyteller & Creative Technologist"
+      content="Dagim Demissie — Visual Storyteller &amp; Creative Technologist"
     />
     <meta
       property="og:description"
       content="I combine storytelling, visual design and technology to build experiences people remember. Editing, motion design, and interactive work."
     />
+    <meta property="og:image" content="/assets/projects/reel-poster.jpg" />
     <meta property="og:locale" content="en_US" />
-    <!-- TODO(content): add og:url once the site is deployed, and og:image
-         (1200x630) once a share image exists. Link previews stay text-only
-         until both are set. -->
-
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="Dagim Demissie — Visual Storyteller & Creative Technologist"
+      content="Dagim Demissie — Visual Storyteller &amp; Creative Technologist"
     />
     <meta
       name="twitter:description"
       content="I combine storytelling, visual design and technology to build experiences people remember. Editing, motion design, and interactive work."
     />
-    <!-- TODO(content): add twitter:image (same asset as og:image). Without it
-         this card renders as a small summary rather than large image. -->
+    <meta name="twitter:image" content="/assets/projects/reel-poster.jpg" />
+    <!-- seo:end -->
+
     <!-- Theme, resolved before first paint. This has to be inline and
          blocking: anything that waits for the JS bundle paints the default
          theme first, and a light-mode visitor sees a full-screen black

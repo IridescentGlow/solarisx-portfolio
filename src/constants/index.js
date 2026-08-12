@@ -126,6 +126,18 @@ export const projects = [
     poster: "/assets/projects/reel-poster.jpg",
     bgImage: "/assets/backgrounds/map.jpg",
     featured: true,
+    // Share metadata for /projects/signature-reel (src/lib/seo.js). Written
+    // out rather than derived from `name`/`outcome`: those are page copy,
+    // tuned for a reader already on the site, and are the wrong length and
+    // register for a link preview. `image` is the existing 1920x1080 poster —
+    // no artwork was created for this. A project without this key falls back
+    // to the site defaults rather than shipping unfinished copy as a card.
+    seo: {
+      title: "Signature Reel - Dagim Demissie",
+      description:
+        "A personal highlight reel built to show range and pacing across recent editing work. Edit, color and sound, cut to the rhythm of the track.",
+      image: "/assets/projects/reel-poster.jpg",
+    },
     // Real case-study copy, sourced directly from the creator (no
     // docs/case-studies/SIGNATURE_REEL.md exists, unlike MediHelp's
     // sourced-from-doc convention). No `gallery` (no real stills exist
@@ -208,6 +220,17 @@ export const projects = [
     // Portfolio have no case-study page yet, so nothing consumes one for them.
     poster: "/assets/projects/medi-help-poster.jpg",
     featured: false,
+    // Share metadata for /projects/medihelp (src/lib/seo.js). Note the title
+    // does not reuse `name` verbatim: `name` carries "Award winning Solution",
+    // which the `outcome` comment above explicitly declines to substantiate.
+    // A link preview is the last place to assert a claim the project data
+    // itself refuses to make, so the title states the project, not a placing.
+    seo: {
+      title: "MediHelp - Dagim Demissie",
+      description:
+        "A hackathon-built healthcare assistant for medically underserved communities: AI symptom checking, first aid guidance and educational content.",
+      image: "/assets/projects/medi-help-poster.jpg",
+    },
     // Depth content (PROJECT_PAGE_SYSTEM.md §3/§4), sourced entirely from
     // docs/case-studies/MEDIHELP_CASE_STUDY.md — that document, not this
     // object, is the source of truth; nothing below adds a fact the case
