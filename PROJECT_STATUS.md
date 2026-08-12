@@ -4,14 +4,11 @@ Portable status snapshot. Full milestone history: docs/CHANGELOG_ARCHIVE.md (rea
 Design/engineering rules: docs/START_HERE.md.
 
 ## Last updated
-Browser-verified (Playwright + headless Chromium, no prior session had this available) both
-the global cursor (src/components/Cursor.jsx, 57cb686) and the BeU Delivery bento assembly
-(b0919dc) — both were already committed, just never actually seen running. All four cursor
-states (default, OPEN ↗, WATCH, LET'S TALK) crossfade and magnetically pull correctly; the
-full bento scroll-assembly renders with zero-crop, uniform gaps, and hands off cleanly into
-the Challenge chapter. Zero console errors across homepage and /projects/signature-reel.
-Deleted a stray untracked 16MB public/assets/projects/beu-delivery.zip (leftover raw-assets
-upload). Build+lint clean.
+Replaced all Signature Reel case-study placeholder copy in `src/constants/index.js` with real
+narrative content (outcome, challenge, approach + challenges, craft development + myRole,
+result), sourced directly from the creator; `credits` key omitted entirely (solo project,
+would've duplicated `craft.myRole`). Build verified clean, browser-verified by the user.
+Committed (`6003611`) and pushed to `origin/main`.
 
 ## Stack
 React 19 + Vite 6, Tailwind v4, GSAP 3 + @gsap/react, React Three Fiber + Drei,
@@ -28,7 +25,7 @@ Navigation always opens new tab (internal or external).
 | Slug | caseStudy | Status |
 |---|---|---|
 | medihelp | full | Complete — only finished case study |
-| signature-reel | placeholder text | Chapter stack + cinematic intro (VideoConstellation, MainReel, StarField2D) built and committed (`8fe69ad`). Real narrative copy still needed — see `[PLACEHOLDER — ...]` markers in constants/index.js. |
+| signature-reel | full | Chapter stack + cinematic intro (VideoConstellation, MainReel, StarField2D) built. Real narrative copy complete and pushed (`6003611`) — no `[PLACEHOLDER — ...]` markers remain. |
 | editor-portfolio | null | Index-only by design, no case-study page |
 | beu-delivery (bento) | n/a | src/components/beu/ — 5th refinement pass done, committed, browser-verified |
 
@@ -38,7 +35,6 @@ grab/drag/momentum. No further stages planned.
 
 ## Known open items
 - SEO/share metadata (per-route <title>/OG) unresolved — needs pre-render/SSG/SSR.
-- signature-reel real copy still needed.
 - ProjectPage.jsx metadata-row mount tween fires offscreen for cinematicIntro projects — needs scroll-triggered version, deferred.
 - .theme-init dead class in crossfade selector.
 - Tailwind bumped 4.1.7→4.3.3 (lockfile only); fixed a malformed CSS comment that was silently truncating --shadow-sm/md/lg tokens.
