@@ -159,6 +159,21 @@ const HOVER_HEIGHT_FIT = 0.94;
 // not a recomposition — while HEIGHT_FIT's clamp still keeps it fully
 // inside the Hero on short viewports.
 const CENTER_FROM_TOP = 0.47;
+// Mobile-only exception to the "overlapping the copy is intended" rule
+// above. That rule holds on desktop, where the name sits in a wide column
+// the star only crosses; below the site's own md: breakpoint (768px, same
+// threshold every other component uses) the name wraps to two lines that
+// span nearly the full width, so a star sized/centred by the same rule
+// lands squarely on top of both lines instead of crossing behind them.
+// Smaller fit fractions plus a higher centre (a smaller from-top fraction
+// moves it up, away from the bottom-anchored copy — see restY below) keep
+// the same "star behind type" composition but with the star occupying
+// less of the frame the name actually needs. Desktop's own constants above
+// are untouched.
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_WIDTH_FIT = 0.62;
+const MOBILE_HEIGHT_FIT = 0.58;
+const MOBILE_CENTER_FROM_TOP = 0.32;
 // The clamps use the full radius on both axes, with no foreshortening term.
 // On a Y-axis turntable the vertical extent is essentially constant (measured
 // stable within 2% across a revolution) and the horizontal extent is widest
@@ -400,7 +415,8 @@ export function GeminiStar({ scale = 1, ...props }) {
   // resize) fixes that at every aspect ratio instead of guessing a second
   // magic number per breakpoint, and it can only ever shrink the caller's
   // requested scale, never inflate it.
-  const { viewport, gl } = useThree();
+  const { viewport, gl, size } = useThree();
+  const isMobileViewport = size.width < MOBILE_BREAKPOINT;
 
   // R3F already updates state.pointer (NDC, -1..1) for the whole Canvas on
   // every pointer move, independent of whether anything was hit — no window
@@ -439,9 +455,11 @@ export function GeminiStar({ scale = 1, ...props }) {
 
   // Two caps against the frame's own edges, smallest wins. Neither knows
   // anything about the copy — overlapping it is intended.
+  const widthFit = isMobileViewport ? MOBILE_WIDTH_FIT : WIDTH_FIT;
+  const heightFit = isMobileViewport ? MOBILE_HEIGHT_FIT : HEIGHT_FIT;
   const maxSafeScale = Math.min(
-    (viewport.width * WIDTH_FIT) / (MODEL_RADIUS * 2),
-    (viewport.height * HEIGHT_FIT) / (MODEL_RADIUS * 2)
+    (viewport.width * widthFit) / (MODEL_RADIUS * 2),
+    (viewport.height * heightFit) / (MODEL_RADIUS * 2)
   );
   const appliedScale = Math.min(scale, maxSafeScale);
 
@@ -463,7 +481,9 @@ export function GeminiStar({ scale = 1, ...props }) {
   const hoverScaleMultiplier =
     appliedScale > 0 ? Math.min(HOVER_SCALE, maxSafeHoverScale / appliedScale) : 1;
 
-  const restY = viewport.height * (0.5 - CENTER_FROM_TOP);
+  const restY =
+    viewport.height *
+    (0.5 - (isMobileViewport ? MOBILE_CENTER_FROM_TOP : CENTER_FROM_TOP));
 
   // Splits the single source mesh into GEMINI_VIDEO_SLOTS.length video
   // regions (front quadrants, back halves) plus one base/glass region for
