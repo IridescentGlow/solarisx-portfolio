@@ -4,17 +4,14 @@ Portable status snapshot. Full milestone history: docs/CHANGELOG_ARCHIVE.md (rea
 Design/engineering rules: docs/START_HERE.md.
 
 ## Last updated
-Global Solarisx cursor (src/components/Cursor.jsx): tiny dot + thin rotating orbital arc by
-default, crossfades (transform/opacity, both layers always mounted) into contextual pill
-labels — OPEN ↗ (Works.jsx project rows), WATCH (MainReel video), LET'S TALK (MainReel's
-mailto CTA), → (any other link/button) — with subtle distance-proportional magnetic pull.
-GSAP quickTo-driven, desktop-only via real hover+fine-pointer check, respects
-prefers-reduced-motion (kills smoothing/spin, keeps state switching). Build+lint clean.
-Not committed, not visually verified in a live browser (none available this session).
-
-BeU Delivery bento (5th refinement pass): grid-derived layout (uniform gaps, zero-crop
-aspect-exact card boxes), phone/buttons/wordmark repositioned, hero crop fixed, idle motion
-sped up. Build+lint clean. Not committed, not visually verified in a live browser.
+Browser-verified (Playwright + headless Chromium, no prior session had this available) both
+the global cursor (src/components/Cursor.jsx, 57cb686) and the BeU Delivery bento assembly
+(b0919dc) — both were already committed, just never actually seen running. All four cursor
+states (default, OPEN ↗, WATCH, LET'S TALK) crossfade and magnetically pull correctly; the
+full bento scroll-assembly renders with zero-crop, uniform gaps, and hands off cleanly into
+the Challenge chapter. Zero console errors across homepage and /projects/signature-reel.
+Deleted a stray untracked 16MB public/assets/projects/beu-delivery.zip (leftover raw-assets
+upload). Build+lint clean.
 
 ## Stack
 React 19 + Vite 6, Tailwind v4, GSAP 3 + @gsap/react, React Three Fiber + Drei,
@@ -33,7 +30,7 @@ Navigation always opens new tab (internal or external).
 | medihelp | full | Complete — only finished case study |
 | signature-reel | placeholder text | Chapter stack + cinematic intro (VideoConstellation, MainReel, StarField2D) built and committed (`8fe69ad`). Real narrative copy still needed — see `[PLACEHOLDER — ...]` markers in constants/index.js. |
 | editor-portfolio | null | Index-only by design, no case-study page |
-| beu-delivery (bento) | n/a | src/components/beu/ — 5th refinement pass done, not committed, not browser-verified |
+| beu-delivery (bento) | n/a | src/components/beu/ — 5th refinement pass done, committed, browser-verified |
 
 ## Gemini Hero (homepage 3D star)
 Stages 1-4 complete: GLB/material/lighting/motion, video textures, hover, proximity tilt,
