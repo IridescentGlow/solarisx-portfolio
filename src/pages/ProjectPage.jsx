@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useRef } from "react";
+import ReactLenis from "lenis/react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -11,6 +12,7 @@ import Marquee from "../components/Marquee";
 import ThemeToggle from "../components/ThemeToggle";
 import { isVideo } from "../lib/media";
 import { EASE, DURATION, SCROLL_REVEAL_START } from "../lib/motion";
+import { useLenisScrollSync } from "../lib/useLenisScrollSync";
 import { ReelIntro } from "../components/reel/ReelIntro";
 import { BentoSection } from "../components/beu/BentoSection";
 
@@ -55,6 +57,13 @@ const GALLERY_IMG =
 const ProjectPage = () => {
   const { slug } = useParams();
   const project = projects.find((p) => p.slug === slug);
+  // autoRaf: false on the <ReactLenis root> below — this drives that
+  // instance's raf off GSAP's own ticker instead, the same sync mechanism
+  // HomePage.jsx now uses (see useLenisScrollSync.js for why: an
+  // unsynchronized Lenis was the actual cause of momentum reading as
+  // "stops almost instantly" on this page's much heavier ScrollTrigger
+  // scrub load).
+  useLenisScrollSync();
   const metadataRef = useRef(null);
   const mediaRef = useRef(null);
   const headingRefs = useRef([]);
@@ -436,11 +445,40 @@ const ProjectPage = () => {
   const cs = project.caseStudy;
 
   return (
-    // overflow-x-clip, not overflow-x-hidden: `hidden` makes this element a
-    // scroll container, which silently breaks `position: sticky` for every
-    // descendant — the chapter stack below would just never pin. `clip`
-    // gives the same horizontal-overflow protection without establishing a
-    // scroll container, so sticky keeps working.
+    // ReactLenis root — the same smooth-scroll instance HomePage.jsx mounts
+    // (root=true), just also mounted here. Project pages previously
+    // rendered with no Lenis at all, so a scroll-wheel mouse fell back to
+    // native scroll: input stops, motion stops instantly. Only one of
+    // HomePage/ProjectPage is ever mounted at a time (react-router renders
+    // one matched route), so this is still a single Lenis instance, never
+    // two competing ones. `root=true` renders its children directly with
+    // no wrapper div, so it cannot interfere with the chapter stack's
+    // `position: sticky` below.
+    //
+    // `autoRaf: false` — useLenisScrollSync() above takes over driving this
+    // instance's raf from GSAP's own ticker instead of Lenis's default
+    // independent loop; see that file for why an unsynchronized Lenis, not
+    // the lerp value, was the actual cause of momentum reading as "stops
+    // almost instantly" on this page's heavy ScrollTrigger scrub load.
+    //
+    // `lerp: 0.06` (Lenis's default, and what HomePage now also gets via
+    // the same sync hook, is 0.1): lerp is how fast the visible scroll
+    // position damps toward the wheel-accumulated target each frame — a
+    // lower value means the catch-up takes longer, which is what
+    // "continues moving noticeably farther after the wheel is released"
+    // actually is. This page carries substantially more competing
+    // ScrollTrigger scrub work than home (the chapter stack, the Bento
+    // assembly, statement-drift, the award sweep), so it keeps a lower
+    // value than home's default rather than an identical copy of it — home
+    // is the floor this is measured against, not a value it has to match
+    // exactly. Still a real eased curve, not an extreme value (Lenis's own
+    // examples commonly run 0.05-0.1) — "more glide," not "no friction."
+    <ReactLenis root options={{ autoRaf: false, lerp: 0.06 }}>
+    {/* overflow-x-clip, not overflow-x-hidden: `hidden` makes this element a
+        scroll container, which silently breaks `position: sticky` for every
+        descendant — the chapter stack below would just never pin. `clip`
+        gives the same horizontal-overflow protection without establishing a
+        scroll container, so sticky keeps working. */}
     <main className="min-h-screen overflow-x-clip text-ink bg-[var(--color-bg-base)]">
 
       {/* §2: the origin tab is never lost (new-tab rule), so this is only
@@ -802,6 +840,15 @@ const ProjectPage = () => {
                     the peeking edge are the actual affordance. */}
                 <div
                   ref={galleryStripRef}
+                  // data-lenis-prevent: Lenis (now mounted on this page via
+                  // ReactLenis root) does not look at event.defaultPrevented
+                  // — it only skips a wheel event if the target's ancestor
+                  // chain has this attribute (lenis.mjs's onVirtualScroll).
+                  // Without it, the onWheel handler below still converts
+                  // the notch to horizontal scrollLeft AND Lenis separately
+                  // smooth-scrolls the page vertically for the same notch —
+                  // this is what stops that double-scroll.
+                  data-lenis-prevent
                   // No scroll-snap. It was the direct cause of the gallery
                   // "barely moving": snapping forces every rest position
                   // onto an item centre, so a full 100px wheel notch
@@ -1070,6 +1117,7 @@ const ProjectPage = () => {
         )}
       </div>
     </main>
+    </ReactLenis>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ReactLenis from "lenis/react";
 import { useProgress } from "@react-three/drei";
+import { useLenisScrollSync } from "../lib/useLenisScrollSync";
 import Navbar from "../sections/Navbar";
 import Hero from "../sections/Hero";
 import ServiceSummary from "../sections/ServiceSummary";
@@ -23,8 +24,18 @@ const HomePage = () => {
     }
   }, [progress]);
 
+  // autoRaf: false — useLenisScrollSync (below) drives this instance's raf
+  // off GSAP's own ticker instead, so this page and ProjectPage.jsx share
+  // the exact same sync mechanism rather than each running its own
+  // independent Lenis loop.
+  useLenisScrollSync();
+
   return (
-    <ReactLenis root className="relative w-screen min-h-screen overflow-x-auto">
+    <ReactLenis
+      root
+      options={{ autoRaf: false }}
+      className="relative w-screen min-h-screen overflow-x-auto"
+    >
       {!isReady && (
         <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-[var(--color-bg-base)] text-ink transition-opacity duration-700 font-light">
           <p className="mb-4 text-xl tracking-widest animate-pulse">
