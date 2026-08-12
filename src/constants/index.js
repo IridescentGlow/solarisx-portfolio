@@ -113,7 +113,7 @@ export const projects = [
     slug: "signature-reel",
     name: "Signature Reel - Portfolio Highlights Showcase",
     outcome:
-      "Placeholder — the cut that shows range: pacing, rhythm and tone across recent work. Replace with the real reel and a concrete signal (client, audience, or reach).",
+      "A personal highlight reel built to show range and pacing across recent editing work - the piece I send when someone needs to see what I do, fast.",
     role: "Edit · Color · Sound",
     year: "2025",
     stack: ["Premiere Pro", "After Effects", "DaVinci Resolve"],
@@ -126,37 +126,29 @@ export const projects = [
     poster: "/assets/projects/reel-poster.jpg",
     bgImage: "/assets/backgrounds/map.jpg",
     featured: true,
-    // Structural placeholder content — NOT real case-study copy. Every
-    // `text` value below is explicitly bracketed "[PLACEHOLDER — ...]" so
-    // it cannot be mistaken for a real claim if it ever renders; each one
-    // states exactly what real input is still needed. This exists to
-    // build and verify the chapter-stack layout/motion (PROJECT_STATUS.md
-    // §21) against real content-shaped text, not to ship as final copy.
-    // Sourced from nothing (no docs/case-studies/SIGNATURE_REEL.md exists,
-    // unlike MediHelp's sourced-from-doc convention) — see PROJECT_STATUS.md
-    // for the exact list of what's missing. No `gallery` (no real stills
-    // exist beyond the reel/clips already shown in the intro) and no
-    // `award` (none exists) — both omitted rather than invented.
+    // Real case-study copy, sourced directly from the creator (no
+    // docs/case-studies/SIGNATURE_REEL.md exists, unlike MediHelp's
+    // sourced-from-doc convention). No `gallery` (no real stills exist
+    // beyond the reel/clips already shown in the intro) and no `award`
+    // (none exists) and no `credits` (solo project - would only repeat
+    // craft.myRole) - all omitted rather than invented or padded.
     caseStudy: {
       challenge: {
-        text: "[PLACEHOLDER — CHALLENGE] What was this reel actually made for — a portfolio submission, a specific ask, a personal showcase? What problem was it solving: proving range across styles, condensing a body of work into a tight runtime, something else? Replace with the real brief/goal.",
+        text: "This reel exists to answer one question fast: what I can actually do. It's not a client deliverable - it's a personal showcase, built to compress a body of work into a runtime that proves range and quality without asking anyone to sit through a full portfolio first.",
       },
       approach: {
-        text: "[PLACEHOLDER — APPROACH] How were the specific clips chosen for this cut? What pacing, rhythm, music, or tone decisions shaped the edit? Replace with the real process.",
+        text: "I come from music production and sound design before editing, and that background shapes how I cut. Music sets the rhythm, the rhythm sets the pacing, and the pacing decides which shots get used and where they land - the edit follows the track, not the other way around.\nThe target was a reel that felt quick, visually immediate, smooth, and polished - something worth watching on its own, not just a demonstration of technique.",
         challenges:
-          "[PLACEHOLDER — WHERE IT GOT HARD] What was the hardest part of assembling this cut — pacing across very different source styles, sourcing usable footage, something else? Replace with a real, specific obstacle.",
+          "The hardest part was restraint - getting the reel to feel premium without letting it get unnecessarily complex. Sophistication came from execution, not from adding more effects.",
       },
       craft: {
         development:
-          "[PLACEHOLDER — CRAFT] What did the actual edit/grade/sound workflow look like beyond the tool list above (Premiere Pro, After Effects, DaVinci Resolve)? Any specific technique worth naming? Replace with real production detail.",
+          "The work covered motion graphics, B-roll selection, sourcing and downloading clips and audio, color grading, and shaping the pacing, rhythm, and flow of the cut. Sound and timing were part of the edit from the start, not a finishing pass.",
         myRole:
-          "[PLACEHOLDER — MY ROLE] Solo edit, or does it include collaborators (colorist, sound designer, etc.)? Replace with the real role breakdown.",
+          "Solo project, start to finish - handled independently.",
       },
       result: {
-        text: "[PLACEHOLDER — RESULT] Where is this reel actually used, and what came of it — job outreach, a platform, a concrete reach number? No real outcome exists in this repo yet; replace with a real, verifiable result rather than an invented metric.",
-      },
-      credits: {
-        text: "[PLACEHOLDER — CREDITS] Solo work, or made with collaborators who should be named? Replace with accurate credit information.",
+        text: "The reel became my go-to highlight for posts and job applications, and it directly helped bring in multiple clients and opportunities.",
       },
     },
     // Opts this project into ReelIntro (src/components/reel/) in place of
