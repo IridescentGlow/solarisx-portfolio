@@ -134,17 +134,28 @@ const ProjectPage = () => {
   // into view — a small delay lets it follow the header rather than
   // competing with it.
   useGSAP(() => {
-    // cinematicIntro projects (ReelIntro) render mediaRef's block, so that
-    // half of this guard is real. metadataRef (role/year/stack) is NOT
-    // skipped for them — ProjectPage.jsx renders it unconditionally,
-    // several viewports below ReelIntro's own scroll-jacked section — so
-    // this mount-delay tween still fires and finishes while the row is
-    // offscreen, producing no visible entrance by the time a visitor
-    // scrolls to it. Known, deferred: this page's MOTION scope is
-    // structure/layout only; a scroll-triggered version of this tween for
-    // cinematicIntro projects is the fix, tracked as follow-up motion work
-    // rather than done here.
     if (!metadataRef.current) return;
+
+    // cinematicIntro projects (ReelIntro) render mediaRef's block, so that
+    // half of this effect is skipped for them entirely (mediaRef.current is
+    // null). metadataRef (role/year/stack) is NOT skipped — it renders
+    // unconditionally, several viewports below ReelIntro's own
+    // scroll-jacked section — so the mount-delay tween below (correct for
+    // every other project, which opens directly into this content) would
+    // finish while the row is still offscreen. Scroll-triggered instead,
+    // using the same reveal curve/duration and the same trigger pattern the
+    // heading pass below already uses.
+    if (project.cinematicIntro) {
+      gsap.from(metadataRef.current, {
+        y: 40,
+        opacity: 0,
+        duration: DURATION.reveal,
+        ease: EASE.cinematic,
+        scrollTrigger: { trigger: metadataRef.current, start: SCROLL_REVEAL_START },
+      });
+      return;
+    }
+
     const tl = gsap.timeline({ delay: 0.6 });
     tl.from(metadataRef.current, {
       y: 40,

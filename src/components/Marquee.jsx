@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react/dist/iconify.js";
 import gsap from "gsap";
 import { Observer } from "gsap/all";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 gsap.registerPlugin(Observer);
 const Marquee = ({
   items,
@@ -12,6 +12,17 @@ const Marquee = ({
 }) => {
   const containerRef = useRef(null);
   const itemsRef = useRef([]);
+  // Icon renders from Iconify's runtime API — no offline collection is
+  // registered anywhere in the app — so on first paint each item's icon can
+  // still be a zero-size placeholder. horizontalLoop measures item widths
+  // synchronously on mount; if that measurement runs before the icon has
+  // actually rendered, every item's baked-in loop width is short by the
+  // icon's real size, and the seam shows up as one item's icon overlapping
+  // the next item's text once the icon pops in. onLoad fires once real icon
+  // data is available (cached or freshly fetched, per Iconify's own
+  // `updateState`), so re-running the effect then re-measures with accurate
+  // widths.
+  const [iconReady, setIconReady] = useState(false);
 
   function horizontalLoop(items, config) {
     items = gsap.utils.toArray(items);
@@ -118,13 +129,20 @@ const Marquee = ({
   }
 
   useEffect(() => {
+    // Build the loop once real widths are available, not on mount — building
+    // it before icons render, then rebuilding on top of it once they do,
+    // would leave a second Observer registered alongside the first (the
+    // cleanup below only ever disposes the most recent one), so the fix is
+    // to wait rather than to redo.
+    if (!iconReady) return;
+
     const tl = horizontalLoop(itemsRef.current, {
       repeat: -1,
       paddingRight: 30,
       reversed: reverse,
     });
 
-    Observer.create({
+    const observer = Observer.create({
       onChangeY(self) {
         let factor = 2.5;
         if ((!reverse && self.deltaY < 0) || (reverse && self.deltaY > 0)) {
@@ -140,8 +158,11 @@ const Marquee = ({
           .to(tl, { timeScale: factor / 2.5, duration: 1 }, "+=0.3");
       },
     });
-    return () => tl.kill();
-  }, [items, reverse]);
+    return () => {
+      tl.kill();
+      observer.kill();
+    };
+  }, [items, reverse, iconReady]);
   return (
     <div
       ref={containerRef}
@@ -154,7 +175,12 @@ const Marquee = ({
             ref={(el) => (itemsRef.current[index] = el)}
             className="flex items-center px-16 gap-x-32"
           >
-            {text} <Icon icon={icon} className={iconClassName} />
+            {text}{" "}
+            <Icon
+              icon={icon}
+              className={iconClassName}
+              onLoad={() => setIconReady(true)}
+            />
           </span>
         ))}
       </div>
