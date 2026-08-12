@@ -411,8 +411,25 @@ body {
      original 68px mobile overflow and this md-tier gap both went
      undetected in an earlier pass. Re-verified with the corrected probe
      across the full width range (375–1920px, extra points at every tier
-     boundary) after landing these values — zero wraps. */
-  @apply text-[48px] sm:text-[90px] md:text-[112px] lg:text-[152px] leading-9 sm:leading-16 lg:leading-20;
+     boundary) after landing these values — zero wraps.
+
+     leading-9/sm:leading-16 are deliberately untouched below md: at those
+     tiers AnimatedHeaderSection renders titleParts as flex-col (one word
+     per line via explicit per-word wrap), so real word-to-word spacing
+     comes from that container's own gap-12/gap-16, not from line-height —
+     these two only set single-line box height there, which this utility
+     never wraps into a second line at those tiers anyway. md:/lg: are
+     different: the h1 switches to md:block (genuine text flow), so a
+     multi-word title that doesn't fit one line — e.g. "Editor Portfolio",
+     unlike "MediHelp" or "Signature Reel" which do fit — wraps for real,
+     and leading-16/leading-20 (64px/80px) are both SMALLER than their
+     tier's own font-size (112px/152px), so the wrapped second line
+     physically overlaps the first. md:leading-30/lg:leading-40 (120px/
+     160px, both a hair over 1x their font-size) fix that while staying
+     tight enough to read as the same display headline; titles that already
+     fit on one line at these tiers get a taller, still-invisible line box
+     and are otherwise unaffected. */
+  @apply text-[48px] sm:text-[90px] md:text-[112px] lg:text-[152px] leading-9 sm:leading-16 md:leading-30 lg:leading-40;
 }
 
 @utility value-text-responsive {
