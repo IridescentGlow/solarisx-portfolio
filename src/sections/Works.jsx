@@ -285,6 +285,7 @@ const Works = () => {
                   to={`/projects/${project.slug}`}
                   onClick={(e) => handleRowClick(e, index, project)}
                   className={titleClassName}
+                  data-cursor="open"
                 >
                   {titleContent}
                 </Link>
@@ -295,6 +296,7 @@ const Works = () => {
                   rel="noopener noreferrer"
                   onClick={(e) => handleRowClick(e, index, project)}
                   className={titleClassName}
+                  data-cursor="open"
                 >
                   {titleContent}
                 </a>

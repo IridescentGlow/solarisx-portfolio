@@ -333,6 +333,14 @@ body {
   font-family: var(--font-amiamie);
 }
 
+/* Global Solarisx cursor (Cursor.jsx) hides the native cursor only once JS
+   has confirmed a fine pointer + hover capability — the class is added
+   after that check, so touch devices and no-JS never lose their cursor. */
+.solaris-cursor-active,
+.solaris-cursor-active * {
+  cursor: none;
+}
+
 /* Theme crossfade. Scoped to the properties that actually carry the theme,
    not `transition: all` — a global all-transition would fight every GSAP
    hover and reveal on the site, since those animate transform and opacity.

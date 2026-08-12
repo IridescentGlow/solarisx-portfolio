@@ -93,6 +93,7 @@ export const MainReel = forwardRef(function MainReel(
         // fit here rather than a forced shared technique.
         className="relative mx-auto overflow-hidden border-8 rounded-lg shadow-lg group border-[var(--color-border)]"
         style={{ maxWidth: `${REEL_MAX_WIDTH_PX}px`, transformOrigin: "center center" }}
+        data-cursor="watch"
       >
         <video
           src={project.image}
@@ -121,6 +122,7 @@ export const MainReel = forwardRef(function MainReel(
             <a
               href="mailto:contactphazotron@gmail.com"
               className="inline-block px-8 py-3 mt-8 text-sm tracking-widest text-white uppercase transition-colors duration-300 border rounded-full border-white/70 hover:bg-white hover:text-black"
+              data-cursor="talk"
             >
               Get in touch
             </a>
