@@ -821,6 +821,11 @@ const ProjectPage = () => {
                 themselves. */}
             {cs.craft.gallery?.length > 0 && (
               <div ref={galleryContainerRef} className="mt-16">
+                {/* Each item renders as <video> when its src extension is a
+                    video type (isVideo(), shared with the hero-media block
+                    above), <img> otherwise — same autoPlay/muted/loop
+                    treatment as the hero clip. An item can carry an optional
+                    `poster`; items without one just have no poster attribute. */}
                 {/* Featured frame — item 0 ("Hero"), full chapter width. */}
                 <figure
                   ref={(el) => (galleryRefs.current[0] = el)}
@@ -828,12 +833,26 @@ const ProjectPage = () => {
                   style={{ width: "calc(100% - 5rem)" }}
                 >
                   <div className="overflow-hidden aspect-video">
-                    <img
-                      src={cs.craft.gallery[0].src}
-                      alt={cs.craft.gallery[0].alt}
-                      loading="lazy"
-                      className={GALLERY_IMG}
-                    />
+                    {isVideo(cs.craft.gallery[0].src) ? (
+                      <video
+                        src={cs.craft.gallery[0].src}
+                        poster={cs.craft.gallery[0].poster}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        aria-label={cs.craft.gallery[0].alt}
+                        className={GALLERY_IMG}
+                      />
+                    ) : (
+                      <img
+                        src={cs.craft.gallery[0].src}
+                        alt={cs.craft.gallery[0].alt}
+                        loading="lazy"
+                        className={GALLERY_IMG}
+                      />
+                    )}
                   </div>
                   <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
                     <span className="text-ink/30">01</span>
@@ -880,12 +899,26 @@ const ProjectPage = () => {
                         className={`shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] ${GALLERY_CARD}`}
                       >
                         <div className="overflow-hidden aspect-video">
-                          <img
-                            src={item.src}
-                            alt={item.alt}
-                            loading="lazy"
-                            className={GALLERY_IMG}
-                          />
+                          {isVideo(item.src) ? (
+                            <video
+                              src={item.src}
+                              poster={item.poster}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                              preload="metadata"
+                              aria-label={item.alt}
+                              className={GALLERY_IMG}
+                            />
+                          ) : (
+                            <img
+                              src={item.src}
+                              alt={item.alt}
+                              loading="lazy"
+                              className={GALLERY_IMG}
+                            />
+                          )}
                         </div>
                         <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
                           <span className="text-ink/30">0{index + 1}</span>
