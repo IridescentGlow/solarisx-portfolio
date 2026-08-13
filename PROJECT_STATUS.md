@@ -4,11 +4,13 @@ Portable status snapshot. Full milestone history: docs/CHANGELOG_ARCHIVE.md (rea
 Design/engineering rules: docs/START_HERE.md.
 
 ## Last updated
-Replaced all Signature Reel case-study placeholder copy in `src/constants/index.js` with real
-narrative content (outcome, challenge, approach + challenges, craft development + myRole,
-result), sourced directly from the creator; `credits` key omitted entirely (solo project,
-would've duplicated `craft.myRole`). Build verified clean, browser-verified by the user.
-Committed (`6003611`) and pushed to `origin/main`.
+Per-route SEO/share metadata shipped: `src/lib/seo.js` (single source of truth, per-project
+`seo` keys in constants), `scripts/prerender-meta.mjs` (post-build injector emitting real
+per-route HTML for crawlers), `src/lib/useDocumentMeta.js` (runtime head upsert for
+client-side nav). `og:url`/canonical deliberately not emitted — no deployment origin exists
+yet; setting `SITE_URL` turns both on. Build + lint clean, verified against served bytes and
+post-JS DOM. Pushed (`0326533`, `9db7a0b`, `c392fa0`). Also repaired power-loss corruption in
+the docs repo (three zero-byte git objects) by restoring its object store from origin.
 
 ## Stack
 React 19 + Vite 6, Tailwind v4, GSAP 3 + @gsap/react, React Three Fiber + Drei,
@@ -34,7 +36,10 @@ Stages 1-4 complete: GLB/material/lighting/motion, video textures, hover, proxim
 grab/drag/momentum. No further stages planned.
 
 ## Known open items
-- SEO/share metadata (per-route <title>/OG) unresolved — needs pre-render/SSG/SSR.
+- SEO/share metadata: per-route <title>/description/OG/Twitter shipped (build-time injection
+  + runtime hook). Still open: `SITE_URL` is unset, so no og:url/canonical and og:image stays
+  root-relative — share cards are text-only until an origin exists. Host must use a
+  non-forced/filesystem-first SPA fallback or the per-route files are bypassed.
 - ProjectPage.jsx metadata-row mount tween fires offscreen for cinematicIntro projects — needs scroll-triggered version, deferred.
 - .theme-init dead class in crossfade selector.
 - Tailwind bumped 4.1.7→4.3.3 (lockfile only); fixed a malformed CSS comment that was silently truncating --shadow-sm/md/lg tokens.
@@ -43,5 +48,6 @@ grab/drag/momentum. No further stages planned.
 - beu bento: map.png (768KB) is a webp-conversion candidate if page weight becomes a concern.
 
 ## Repo notes
-docs/ is a git submodule with its own remote (Claude-Manual on GitHub) — commits there need a
-separate push. Currently one local-only commit in docs/ (CHANGELOG_ARCHIVE.md) not yet pushed.
+docs/ is an embedded git repo with its own remote (Claude-Manual on GitHub) — tracked as a
+gitlink but with no .gitmodules entry, so it is not a registered submodule. Commits there need
+a separate push, plus a gitlink bump in the parent. Both are currently pushed and in sync.
