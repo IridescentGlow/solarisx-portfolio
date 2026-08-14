@@ -54,6 +54,85 @@ const GALLERY_IMG =
   "object-cover w-full h-full transition-transform duration-[1200ms] " +
   "ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06] group-focus-within:scale-[1.06]";
 
+// Gallery item media + caption — shared by the featured frame and every
+// strip item so the two can't drift out of sync now that both need the
+// same href-wrap and video-ref logic. `videoRef` is only attached when the
+// item renders as a video; the IntersectionObserver in ProjectPage uses it
+// for viewport-gated play/pause (see the effect below `galleryVideoRefs`).
+// No `autoPlay` attribute here deliberately — that gate is what decides
+// when playback starts, not the browser on mount.
+//
+// `item.href`, when present, wraps the media + caption in a single link
+// rather than just the image/video: `className="contents"` keeps the
+// anchor from adding a layout box of its own, so it renders identically to
+// the unlinked case with one link covering the whole visible card. The
+// accessible name comes from an explicit `aria-label` (alt, falling back
+// to caption) rather than relying on computed text content, since a video
+// has none of its own.
+const GalleryItemBody = ({ item, index, videoRef }) => {
+  // A link-out item (href, no locally-hosted src — e.g. an external source
+  // this project deliberately doesn't rehost) has nothing to branch isVideo()
+  // on. Its `poster` is a real extracted still, not a placeholder, so it
+  // renders as the static image in that case rather than an <img> with an
+  // undefined src.
+  const media = !item.src ? (
+    <img
+      src={item.poster}
+      alt={item.alt}
+      loading="lazy"
+      className={GALLERY_IMG}
+    />
+  ) : isVideo(item.src) ? (
+    <video
+      ref={videoRef}
+      src={item.src}
+      poster={item.poster}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      aria-label={item.alt}
+      className={GALLERY_IMG}
+    />
+  ) : (
+    <img
+      src={item.src}
+      alt={item.alt}
+      loading="lazy"
+      className={GALLERY_IMG}
+    />
+  );
+
+  const caption = (
+    <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
+      <span className="text-ink/30">{String(index + 1).padStart(2, "0")}</span>
+      {item.caption}
+    </figcaption>
+  );
+
+  if (!item.href) {
+    return (
+      <>
+        <div className="overflow-hidden aspect-video">{media}</div>
+        {caption}
+      </>
+    );
+  }
+
+  return (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={item.alt || item.caption}
+      className="contents"
+    >
+      <div className="overflow-hidden aspect-video">{media}</div>
+      {caption}
+    </a>
+  );
+};
+
 const ProjectPage = () => {
   const { slug } = useParams();
   const project = projects.find((p) => p.slug === slug);
@@ -70,6 +149,7 @@ const ProjectPage = () => {
   const galleryContainerRef = useRef(null);
   const galleryStripRef = useRef(null);
   const galleryRefs = useRef([]);
+  const galleryVideoRefs = useRef([]);
   const resultRef = useRef(null);
   const awardChapterRef = useRef(null);
   const sweepRefs = useRef([]);
@@ -420,6 +500,40 @@ const ProjectPage = () => {
       el.removeEventListener("touchstart", resync);
       gsap.killTweensOf(el);
     };
+  }, [project]);
+
+  // Gallery video playback — viewport-gated. The strip mounts every item
+  // at once, most of them off-screen horizontally rather than vertically —
+  // nothing about a plain vertical-scroll check would catch that. Left
+  // ungated, every video gallery item would buffer/decode simultaneously
+  // regardless of visibility, a real jank/battery cost distinct from their
+  // (small) file size. IntersectionObserver's default root is the page
+  // viewport, and it already accounts for clipping from the strip's own
+  // overflow-x-auto container, so no custom root wiring is needed here —
+  // an item scrolled outside the strip's visible window correctly reports
+  // as not intersecting even though the strip itself is on-screen
+  // vertically. The hero video above (mediaRef) is untouched: one clip is
+  // not a multiplied cost, and it keeps its original autoPlay attribute.
+  useEffect(() => {
+    const videos = galleryVideoRefs.current.filter(Boolean);
+    if (videos.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.play().catch(() => {});
+          else entry.target.pause();
+        });
+      },
+      // rootMargin gives playback a head start just before an item is
+      // fully in view rather than waiting for the exact viewport edge;
+      // threshold 0.25 avoids starting/stopping on a sliver of an item
+      // just barely peeking in from the strip's scroll affordance edge.
+      { rootMargin: "200px", threshold: 0.25 }
+    );
+
+    videos.forEach((video) => observer.observe(video));
+    return () => observer.disconnect();
   }, [project]);
 
   // caseStudy is `{}` (truthy, no keys) once a project's row starts routing
@@ -823,41 +937,24 @@ const ProjectPage = () => {
               <div ref={galleryContainerRef} className="mt-16">
                 {/* Each item renders as <video> when its src extension is a
                     video type (isVideo(), shared with the hero-media block
-                    above), <img> otherwise — same autoPlay/muted/loop
-                    treatment as the hero clip. An item can carry an optional
-                    `poster`; items without one just have no poster attribute. */}
+                    above), <img> otherwise — same muted/loop treatment as
+                    the hero clip, but gated (see the IntersectionObserver
+                    effect above) rather than autoplaying unconditionally on
+                    mount. An item can carry an optional `poster`, and an
+                    optional `href` to link the whole card out to an
+                    external source instead of/alongside local media — see
+                    GalleryItemBody above. */}
                 {/* Featured frame — item 0 ("Hero"), full chapter width. */}
                 <figure
                   ref={(el) => (galleryRefs.current[0] = el)}
                   className={`relative mx-10 ${GALLERY_CARD}`}
                   style={{ width: "calc(100% - 5rem)" }}
                 >
-                  <div className="overflow-hidden aspect-video">
-                    {isVideo(cs.craft.gallery[0].src) ? (
-                      <video
-                        src={cs.craft.gallery[0].src}
-                        poster={cs.craft.gallery[0].poster}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        aria-label={cs.craft.gallery[0].alt}
-                        className={GALLERY_IMG}
-                      />
-                    ) : (
-                      <img
-                        src={cs.craft.gallery[0].src}
-                        alt={cs.craft.gallery[0].alt}
-                        loading="lazy"
-                        className={GALLERY_IMG}
-                      />
-                    )}
-                  </div>
-                  <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
-                    <span className="text-ink/30">01</span>
-                    {cs.craft.gallery[0].caption}
-                  </figcaption>
+                  <GalleryItemBody
+                    item={cs.craft.gallery[0]}
+                    index={0}
+                    videoRef={(el) => (galleryVideoRefs.current[0] = el)}
+                  />
                 </figure>
 
                 {/* Remaining seven, horizontal scroll-snap — large frames
@@ -894,36 +991,18 @@ const ProjectPage = () => {
                     const index = i + 1;
                     return (
                       <figure
-                        key={item.src}
+                        // A link-out item (§2, href with no local src) has
+                        // no `src` to key on — fall through to href, then
+                        // caption, so the key stays stable and unique.
+                        key={item.src || item.href || item.caption}
                         ref={(el) => (galleryRefs.current[index] = el)}
                         className={`shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] ${GALLERY_CARD}`}
                       >
-                        <div className="overflow-hidden aspect-video">
-                          {isVideo(item.src) ? (
-                            <video
-                              src={item.src}
-                              poster={item.poster}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
-                              preload="metadata"
-                              aria-label={item.alt}
-                              className={GALLERY_IMG}
-                            />
-                          ) : (
-                            <img
-                              src={item.src}
-                              alt={item.alt}
-                              loading="lazy"
-                              className={GALLERY_IMG}
-                            />
-                          )}
-                        </div>
-                        <figcaption className="flex items-center gap-3 px-4 py-3 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
-                          <span className="text-ink/30">0{index + 1}</span>
-                          {item.caption}
-                        </figcaption>
+                        <GalleryItemBody
+                          item={item}
+                          index={index}
+                          videoRef={(el) => (galleryVideoRefs.current[index] = el)}
+                        />
                       </figure>
                     );
                   })}

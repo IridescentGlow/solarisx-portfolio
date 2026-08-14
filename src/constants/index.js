@@ -182,16 +182,101 @@ export const projects = [
     slug: "editor-portfolio",
     name: "Editor Portfolio - Selected Works",
     outcome:
-      "kinetic typography and compositing built to carry a story beat rather than decorate it. Replace with the real piece and what it was made for.",
-    role: "Motion Design · VFX",
-    year: "Present",
-    stack: ["After Effects", "Photoshop"],
+      "A selected body of client and freelance editing work across long-form YouTube, short-form social, and brand content - built around one throughline: hook the viewer in the first seconds and hold them through the cut.",
+    role: "Video Editor",
+    year: "2024-2025",
+    stack: ["Premiere Pro", "After Effects", "DaVinci Resolve", "CapCut"],
     liveHref: "https://ytjobs.co/talent/profile/273483",
     repoHref: "",
-    image: "/assets/projects/game-store.jpg",
+    // Work 01 (Senai English tutorial) as the card/hero preview - the
+    // fullest, most representative local piece in the collection, and a
+    // real asset rather than the template's leftover game-store.jpg.
+    image: "/assets/projects/editor-portfolio/work-01.mp4",
+    poster: "/assets/projects/editor-portfolio/work-01-poster.jpg",
     bgImage: "/assets/backgrounds/poster.jpg",
     featured: false,
-    caseStudy: null,
+    seo: {
+      title: "Editor Portfolio - Dagim Demissie",
+      description:
+        "A selected body of client and freelance editing work across long-form YouTube, short-form social, and brand content - built around hooks, pacing, and retention.",
+      image: "/assets/projects/editor-portfolio/work-01-poster.jpg",
+    },
+    // Real case-study copy. Unlike Signature Reel (one personal edit) or
+    // MediHelp (one build), this project is a collection of six separate
+    // client/freelance engagements - the narrative is about range and
+    // adaptability across them, not one project's arc. No `credits` (each
+    // piece was an independent engagement, not a team) and no `award`
+    // (none exists) - both omitted rather than invented.
+    caseStudy: {
+      challenge: {
+        text: "A single reel can prove one style. This body of work exists to prove something harder: that the editing itself adapts - to the subject, the audience, the platform, and the feeling a piece is supposed to leave behind - without turning into a disconnected pile of unrelated clips.",
+      },
+      approach: {
+        text: "None of these pieces share a house style, because none of them share an audience. An educational video earns attention through clarity and pacing. A commercial has to persuade inside a few seconds without losing the lesson underneath it. Gaming content lives or dies on comedic timing and energy. Short-form has to hook before a thumb decides otherwise. A vlog asks for atmosphere and the patience to let a moment breathe. A beauty ad asks for polish and a shot that reads as product-quality on its own.\nThe style follows the content - never the other way around.",
+        challenges:
+          "The harder discipline is restraint - knowing when a cut, a caption, or a graphic earns its place, and when it would just be noise on top of a piece that's already working. Every project here made that call differently; the only rule that held across all of them was that the edit serves the content first, not a default style repeated regardless of what the piece actually needed.",
+      },
+      craft: {
+        development:
+          "The work spans opening a piece with a hook strong enough to earn the next few seconds, building pacing and rhythm around what a piece is actually saying, and pulling the sharpest moments out of hours of raw or long-form footage rather than using it in order. It covers B-roll selection, captions and subtitles, motion graphics, sound design and audio cleanup, color correction and grading, and shaping visual emphasis differently depending on where a piece is going to be watched - a long-form YouTube video and a vertical short are never cut with the same instincts.",
+        myRole:
+          "Independent video editor across every piece in this collection - responsible for turning raw or long-form source material into finished, platform-ready edits.",
+        // Six real pieces. Work 01/02 are locally hosted (own footage,
+        // clients whose work can be shown directly); Work 10/07/05/08 are
+        // re-edits of other creators'/platforms' source footage or other
+        // client work not rehosted here, so they link out to the original
+        // upload instead - each carries a real extracted still (ffmpeg,
+        // from the actual linked video, never a YouTube thumbnail URL) as
+        // its poster rather than local video.
+        gallery: [
+          {
+            src: "/assets/projects/editor-portfolio/work-01.mp4",
+            poster: "/assets/projects/editor-portfolio/work-01-poster.jpg",
+            alt: "Senai English long-form tutorial edit",
+            caption:
+              "Senai English - long-form educational edit built around clarity, pacing, and retention.",
+          },
+          {
+            src: "/assets/projects/editor-portfolio/work-02.mp4",
+            poster: "/assets/projects/editor-portfolio/work-02-poster.jpg",
+            alt: "Senai English ad campaign edit",
+            caption:
+              "Senai English - campaign edit balancing education, persuasion, and a clear commercial message.",
+          },
+          {
+            href: "https://youtu.be/-PMsvyKB_7g",
+            poster: "/assets/projects/editor-portfolio/work-10-poster.jpg",
+            alt: "CaseOh RLCraft highlight edit",
+            caption:
+              "CaseOh - a long-form RLCraft stream cut down into a fast, comedic highlight edit.",
+          },
+          {
+            href: "https://youtube.com/shorts/vfWxt3AV6-c",
+            poster: "/assets/projects/editor-portfolio/work-07-poster.jpg",
+            alt: "IsaacELera short-form edit",
+            caption:
+              "IsaacELera - livestream footage adapted into a fast, hook-driven short.",
+          },
+          {
+            href: "https://youtu.be/Y28NN1U7MNE",
+            poster: "/assets/projects/editor-portfolio/work-05-poster.jpg",
+            alt: "PewDiePie Japan vlog re-edit",
+            caption:
+              "A long-form Japan vlog re-cut for atmosphere, pacing, and restraint.",
+          },
+          {
+            href: "https://youtube.com/shorts/usbcVlkC_-g",
+            poster: "/assets/projects/editor-portfolio/work-08-poster.jpg",
+            alt: "Lip filler advertisement edit",
+            caption:
+              "A beauty/advertising edit built for visual polish and a clear product message.",
+          },
+        ],
+      },
+      result: {
+        text: "This body of work is what accompanies job applications on platforms like YT Jobs and Afriwork, and it's the collection clients and employers actually look at before a conversation starts. It exists to demonstrate range in a single sitting, and it has directly helped turn applications into real client work and opportunities.",
+      },
+    },
   },
   {
     id: 3,
