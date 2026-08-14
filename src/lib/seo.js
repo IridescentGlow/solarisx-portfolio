@@ -21,12 +21,18 @@
 // it must stay dependency-free and use fully-specified import paths.
 import { projects } from "../constants/index.js";
 
-// No deployment origin exists yet (confirmed with the site owner). Set this
-// to the deployed origin — e.g. "https://example.com", no trailing slash —
-// and canonical + og:url + absolute og:image URLs all start being emitted.
-// Nothing else needs to change. Emitting a guessed origin would be worse
-// than emitting none: a wrong canonical actively misdirects crawlers.
-export const SITE_URL = "";
+// Deployed origin, e.g. "https://example.com", no trailing slash — read from
+// Vite's env so the value can be set per-environment (Vercel Production)
+// without a source edit. This module also runs under plain Node
+// (scripts/prerender-meta.mjs), where `import.meta.env` doesn't exist, so
+// fall back to `process.env` there. Unset falls back to "", which keeps the
+// existing "omit rather than fabricate" behavior: a wrong canonical actively
+// misdirects crawlers, so absence is preferred to a guess.
+const env =
+  (typeof import.meta !== "undefined" && import.meta.env) ||
+  (typeof process !== "undefined" && process.env) ||
+  {};
+export const SITE_URL = env.VITE_SITE_URL ?? "";
 
 export const SITE_NAME = "Solarisx";
 export const SITE_TITLE =
