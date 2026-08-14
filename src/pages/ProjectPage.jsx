@@ -53,6 +53,18 @@ const GALLERY_CARD =
 const GALLERY_IMG =
   "object-cover w-full h-full transition-transform duration-[1200ms] " +
   "ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06] group-focus-within:scale-[1.06]";
+// EditorWorkRow's own media treatment — GALLERY_IMG plus a modest hover/
+// focus blur (task: "video interaction should be more obvious"). A separate
+// constant rather than appending classes to GALLERY_IMG: both set
+// transition-property, and two utility classes fighting over the same CSS
+// property depend on generated-stylesheet order, not className string
+// order — fragile. Written out in full instead so it's self-contained.
+// Blur stays modest (2px) so the footage is still recognizable, not
+// abstracted, per the brief.
+const EDITORIAL_MEDIA_IMG =
+  "object-cover w-full h-full transition-[transform,filter] duration-[1200ms] " +
+  "ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06] group-hover:blur-[2px] " +
+  "group-focus-within:scale-[1.06] group-focus-within:blur-[2px]";
 
 // Gallery item media + caption — shared by the featured frame and every
 // strip item so the two can't drift out of sync now that both need the
@@ -164,9 +176,103 @@ const workNumberOf = (item, index) => {
   return match ? match[1] : String(index + 1).padStart(2, "0");
 };
 
-const EditorWorkRow = ({ item, index, mediaSide, rowRef, videoRef }) => {
+const EditorWorkRow = ({ item, index, mediaSide, videoRef }) => {
+  const containerRef = useRef(null);
+  // Two separate wrapper refs, not one, though both only ever hold a
+  // transform: GSAP's transform cache snapshots an element's OTHER
+  // transform components (e.g. x) the moment a tween targeting a
+  // DIFFERENT component (e.g. scale) is created, then keeps re-applying
+  // that stale snapshot on every render — which for a scrub tween is every
+  // scroll tick. Two tweens on the same element fighting over transform
+  // (the entrance x tween below vs. the secondary-motion scale tween)
+  // manifested as the entrance never visibly completing: scale kept
+  // stomping x back to its pre-entrance value on the next scrub frame.
+  // Splitting into nested wrappers — entranceRef (x, opacity) outside,
+  // scaleRef (scale) inside — gives each tween its own element to own
+  // exclusively, which is the actual fix (confirmed: without this split,
+  // computed transform stayed frozen at the entrance's FROM value even
+  // after ScrollTrigger reported the entrance timeline at progress 1).
+  const entranceRef = useRef(null);
+  const scaleRef = useRef(null);
+  const textItemRefs = useRef([]);
+  const pushTextRef = (el) => {
+    if (el && !textItemRefs.current.includes(el)) textItemRefs.current.push(el);
+  };
+  const reduceMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Directional entrance, scoped to THIS row's own scroll position (not the
+  // gallery container's) — media slides in from the side it's actually
+  // placed on, text from the opposite side, so the alternating composition
+  // reads as two objects converging rather than one effect repeated six
+  // times. Transform+opacity together (never opacity alone), per the brief's
+  // "physical, deliberate feel rather than a generic fade." Text staggers
+  // internally (number -> title -> description -> meta) at a much shorter
+  // offset than the tween's own duration, so it still lands as one cohesive
+  // block rather than a line-by-line typewriter.
+  //
+  // Skipped outright under prefers-reduced-motion — same convention as the
+  // Award sweep above (lib/motion.js's global duration:0 default doesn't
+  // reach a tween that sets its own duration, so scroll-triggered entrances
+  // need their own explicit guard).
+  useGSAP(() => {
+    if (!containerRef.current || reduceMotion) return;
+    const distance = window.innerWidth < 768 ? 28 : 72;
+    const mediaFromX = mediaSide === "left" ? -distance : distance;
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: containerRef.current, start: SCROLL_REVEAL_START },
+    });
+    tl.from(entranceRef.current, {
+      x: mediaFromX,
+      opacity: 0,
+      duration: 1.3,
+      ease: EASE.cinematic,
+    });
+    tl.from(
+      textItemRefs.current,
+      {
+        x: -mediaFromX,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.08,
+        ease: EASE.cinematic,
+      },
+      "<0.15"
+    );
+  }, [mediaSide]);
+
+  // Secondary motion layer: a restrained scale progression as the row
+  // transits the viewport — About.jsx's own scrub technique (scale,
+  // scrollTrigger-scrubbed, power1.inOut) reused verbatim rather than
+  // inventing a parallax system, the same convention already applied to
+  // mediaRef/resultRef/awardChapterRef above. Targets `scaleRef`, its own
+  // dedicated wrapper — never entranceRef (see the comment on that ref for
+  // why two transform tweens can't safely share one element), and never
+  // GALLERY_CARD/GALLERY_IMG directly — both already carry their own CSS
+  // hover transforms (hover-lift, hover-scale), and a GSAP inline
+  // transform on the same element would fight the CSS transition on
+  // hover/focus.
+  useGSAP(() => {
+    if (!containerRef.current || !scaleRef.current || reduceMotion) return;
+    gsap.fromTo(
+      scaleRef.current,
+      { scale: 1.06 },
+      {
+        scale: 1,
+        ease: "power1.inOut",
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: true,
+        },
+      }
+    );
+  }, [mediaSide]);
+
   const media = !item.src ? (
-    <img src={item.poster} alt={item.alt} loading="lazy" className={GALLERY_IMG} />
+    <img src={item.poster} alt={item.alt} loading="lazy" className={EDITORIAL_MEDIA_IMG} />
   ) : isVideo(item.src) ? (
     <video
       ref={videoRef}
@@ -177,25 +283,39 @@ const EditorWorkRow = ({ item, index, mediaSide, rowRef, videoRef }) => {
       playsInline
       preload="metadata"
       aria-label={item.alt}
-      className={GALLERY_IMG}
+      className={EDITORIAL_MEDIA_IMG}
     />
   ) : (
-    <img src={item.src} alt={item.alt} loading="lazy" className={GALLERY_IMG} />
+    <img src={item.src} alt={item.alt} loading="lazy" className={EDITORIAL_MEDIA_IMG} />
   );
 
+  // Hover/focus overlay: a modest darkening wash (contrast for the label),
+  // the play circle growing from a subdued rest state into full prominence,
+  // and a small PLAY label sliding/fading in beneath it. Every group-hover:
+  // has a matching group-focus-within: so keyboard focus on the real
+  // interactive element (the <a>, for href items) produces the same state —
+  // this span itself stays aria-hidden and adds no accessible name of its
+  // own; nothing here is a second interactive control.
   const playBadge = (
     <span
       aria-hidden="true"
-      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+      className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-black/0 transition-colors duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:bg-black/20 group-focus-within:bg-black/20"
     >
-      <span className="flex items-center justify-center transition-[transform,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-full backdrop-blur-sm bg-[var(--color-surface-2)]/70 border border-[var(--color-border)] size-14 md:size-16 group-hover:scale-110 group-hover:bg-[var(--color-accent-subtle)] group-focus-within:scale-110">
+      <span className="flex items-center justify-center scale-95 rounded-full opacity-80 backdrop-blur-sm bg-[var(--color-surface-2)]/70 border border-[var(--color-border)] size-14 md:size-16 transition-[transform,opacity,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:opacity-100 group-hover:bg-[var(--color-accent-subtle)] group-focus-within:scale-110 group-focus-within:opacity-100">
         <Icon icon="mdi:play" className="ml-1 text-ink size-6 md:size-7" />
+      </span>
+      <span className="mt-3 text-[10px] font-medium tracking-[0.3em] uppercase text-ink opacity-0 translate-y-1 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-70 group-hover:translate-y-0 group-focus-within:opacity-70 group-focus-within:translate-y-0">
+        Play
       </span>
     </span>
   );
 
   const mediaFrame = (
     <div className="relative overflow-hidden aspect-video">
+      {/* Hover/focus blur on the footage itself — modest (2px), so the frame
+          stays recognizable rather than turning abstract; combined with the
+          existing hover-scale (GALLERY_IMG) via the same transitioned
+          property list rather than a second competing transition. */}
       {media}
       {playBadge}
     </div>
@@ -217,23 +337,39 @@ const EditorWorkRow = ({ item, index, mediaSide, rowRef, videoRef }) => {
 
   return (
     <div
-      ref={rowRef}
+      ref={containerRef}
       className={`flex flex-col gap-6 md:gap-16 md:items-center ${
         mediaSide === "right" ? "md:flex-row-reverse" : "md:flex-row"
       }`}
     >
-      <div className="md:w-1/2">{mediaBlock}</div>
       <div className="md:w-1/2">
-        <p className="text-xs tracking-[0.2em] uppercase text-[var(--color-accent)]">
+        <div ref={entranceRef}>
+          <div ref={scaleRef}>{mediaBlock}</div>
+        </div>
+      </div>
+      <div className="md:w-1/2">
+        <p
+          ref={pushTextRef}
+          className="text-xs tracking-[0.2em] uppercase text-[var(--color-accent)]"
+        >
           Work {workNumberOf(item, index)}
         </p>
-        <h3 className="mt-3 text-2xl font-light text-ink md:text-3xl">
+        <h3
+          ref={pushTextRef}
+          className="mt-3 text-2xl font-light text-ink md:text-3xl"
+        >
           {item.alt}
         </h3>
-        <p className="max-w-[60ch] mt-4 text-body-lg text-[var(--color-text-secondary)]">
+        <p
+          ref={pushTextRef}
+          className="max-w-[60ch] mt-4 text-body-lg text-[var(--color-text-secondary)]"
+        >
           {item.caption}
         </p>
-        <p className="mt-4 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
+        <p
+          ref={pushTextRef}
+          className="mt-4 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]"
+        >
           {item.href ? "External link — opens on YouTube ↗" : "Local edit"}
         </p>
       </div>
@@ -397,7 +533,13 @@ const ProjectPage = () => {
   // Gallery images wipe in like About.jsx's portrait (clipPath bottom-up),
   // staggered rather than one at a time — the same reveal grammar the home
   // page already uses for its one photograph, applied to a set of eight.
+  //
+  // Explicitly skipped for the editorial layout: EditorWorkRow drives its
+  // own per-row directional entrance now (its own useGSAP, scoped to each
+  // row's own scroll position), so this bulk container-level effect would
+  // be a second, conflicting reveal on the same elements if it ran too.
   useGSAP(() => {
+    if (project.caseStudy?.craft?.galleryLayout === "editorial") return;
     const gallery = galleryRefs.current.filter(Boolean);
     if (gallery.length === 0) return;
     gsap.set(gallery, {
@@ -1056,18 +1198,25 @@ const ProjectPage = () => {
                      One large row per work, media alternating sides by index
                      parity, instead of the featured-frame + horizontal-strip
                      layout below. galleryStripRef/the wheel-conversion effect
-                     simply no-op here (their ref never attaches), and
-                     galleryRefs/galleryVideoRefs still get populated per row
-                     so the reveal + viewport-gated playback effects above
-                     keep working unchanged. */
-                  <div className="flex flex-col gap-20 px-10 md:gap-32">
+                     simply no-op here (their ref never attaches); the bulk
+                     clip-path reveal effect below is explicitly skipped for
+                     this layout (its own guard) since EditorWorkRow drives
+                     its own per-row entrance now. galleryVideoRefs still
+                     gets populated per row so viewport-gated playback keeps
+                     working unchanged.
+                     gap-24/md:gap-40 (up from gap-20/md:gap-32) — more
+                     clearance under each card's hover shadow-lift (0 28px
+                     72px) now that the secondary scale-progression motion
+                     transiently enlarges the card as it transits, so the
+                     shadow's effective reach needs a bit more room than the
+                     static layout required. */
+                  <div className="flex flex-col gap-24 px-10 md:gap-40">
                     {cs.craft.gallery.map((item, index) => (
                       <EditorWorkRow
                         key={item.src || item.href || item.caption}
                         item={item}
                         index={index}
                         mediaSide={index % 2 === 0 ? "left" : "right"}
-                        rowRef={(el) => (galleryRefs.current[index] = el)}
                         videoRef={(el) => (galleryVideoRefs.current[index] = el)}
                       />
                     ))}
