@@ -133,6 +133,114 @@ const GalleryItemBody = ({ item, index, videoRef }) => {
   );
 };
 
+// Editor Portfolio's editorial gallery row — one large case-study moment per
+// work, media alternating sides by index parity, used only when a project's
+// caseStudy.craft.galleryLayout is "editorial" (currently: Editor Portfolio
+// only; MediHelp's craft.gallery has no such key and keeps the strip above
+// unchanged). Reuses GALLERY_CARD/GALLERY_IMG/isVideo verbatim so hover-lift,
+// scale, and the video/image/href branching can't drift from the strip's own
+// version. `rowRef`/`videoRef` register into the SAME galleryRefs/
+// galleryVideoRefs arrays the page's existing clip-path reveal (useGSAP,
+// above) and viewport-gated playback (IntersectionObserver, above) already
+// read — both effects operate generically on those ref arrays regardless of
+// DOM shape, so this new layout inherits both without either effect
+// changing.
+//
+// Play indicator: a decorative, aria-hidden circle over the media (mirrors
+// ThemeToggle's own backdrop-blur circle-button treatment, just
+// non-interactive) — never a real control of its own, so it can't create a
+// nested-interactive-control violation. The one real interactive element per
+// item is the <a> (href items) or the <video> itself (local items, already
+// carrying aria-label); the badge adds no second accessible name.
+// The gallery's own array position (index) is NOT the work's real number —
+// data order is 01, 02, 10, 07, 05, 08 (see constants/index.js's own
+// comment on why), so `index + 1` would mislabel every item from the third
+// on (e.g. the CaseOh piece, actually work-10, reading as "Work 03").
+// Pulled from the filename itself (src for local items, poster for
+// href/link-out items — both are named work-<NN>-... consistently), so the
+// label can never drift from the asset it's naming.
+const workNumberOf = (item, index) => {
+  const match = (item.src || item.poster || "").match(/work-(\d+)/);
+  return match ? match[1] : String(index + 1).padStart(2, "0");
+};
+
+const EditorWorkRow = ({ item, index, mediaSide, rowRef, videoRef }) => {
+  const media = !item.src ? (
+    <img src={item.poster} alt={item.alt} loading="lazy" className={GALLERY_IMG} />
+  ) : isVideo(item.src) ? (
+    <video
+      ref={videoRef}
+      src={item.src}
+      poster={item.poster}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      aria-label={item.alt}
+      className={GALLERY_IMG}
+    />
+  ) : (
+    <img src={item.src} alt={item.alt} loading="lazy" className={GALLERY_IMG} />
+  );
+
+  const playBadge = (
+    <span
+      aria-hidden="true"
+      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+    >
+      <span className="flex items-center justify-center transition-[transform,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-full backdrop-blur-sm bg-[var(--color-surface-2)]/70 border border-[var(--color-border)] size-14 md:size-16 group-hover:scale-110 group-hover:bg-[var(--color-accent-subtle)] group-focus-within:scale-110">
+        <Icon icon="mdi:play" className="ml-1 text-ink size-6 md:size-7" />
+      </span>
+    </span>
+  );
+
+  const mediaFrame = (
+    <div className="relative overflow-hidden aspect-video">
+      {media}
+      {playBadge}
+    </div>
+  );
+
+  const mediaBlock = item.href ? (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={item.alt || item.caption}
+      className={`relative block ${GALLERY_CARD}`}
+    >
+      {mediaFrame}
+    </a>
+  ) : (
+    <div className={`relative ${GALLERY_CARD}`}>{mediaFrame}</div>
+  );
+
+  return (
+    <div
+      ref={rowRef}
+      className={`flex flex-col gap-6 md:gap-16 md:items-center ${
+        mediaSide === "right" ? "md:flex-row-reverse" : "md:flex-row"
+      }`}
+    >
+      <div className="md:w-1/2">{mediaBlock}</div>
+      <div className="md:w-1/2">
+        <p className="text-xs tracking-[0.2em] uppercase text-[var(--color-accent)]">
+          Work {workNumberOf(item, index)}
+        </p>
+        <h3 className="mt-3 text-2xl font-light text-ink md:text-3xl">
+          {item.alt}
+        </h3>
+        <p className="max-w-[60ch] mt-4 text-body-lg text-[var(--color-text-secondary)]">
+          {item.caption}
+        </p>
+        <p className="mt-4 text-xs tracking-wider uppercase text-[var(--color-text-tertiary)]">
+          {item.href ? "External link — opens on YouTube ↗" : "Local edit"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const ProjectPage = () => {
   const { slug } = useParams();
   const project = projects.find((p) => p.slug === slug);
@@ -702,8 +810,15 @@ const ProjectPage = () => {
           Skipped for cinematicIntro projects: ReelIntro's own MainReel
           renders the project's hero media itself (arriving small, then
           enlarging), so this generic static frame would be a redundant
-          second copy of the same clip. */}
-      {!project.cinematicIntro && (
+          second copy of the same clip.
+
+          Also skipped when project.hideHeroMedia is set (currently: Editor
+          Portfolio) — that project's hero clip is the same file as
+          caseStudy.craft.gallery[0], so this frame would be a duplicate
+          standalone video ahead of the actual gallery rather than a real
+          second piece of content. mediaRef stays null in that case, which
+          the mount-animation effect above already guards on. */}
+      {!project.cinematicIntro && !project.hideHeroMedia && (
         <div ref={mediaRef} className="px-10 mt-24 md:mt-40">
           <div className="max-w-7xl mx-auto overflow-hidden border-8 rounded-lg shadow-lg border-[var(--color-border)]">
             {isVideo(project.image) ? (
@@ -935,81 +1050,107 @@ const ProjectPage = () => {
                 themselves. */}
             {cs.craft.gallery?.length > 0 && (
               <div ref={galleryContainerRef} className="mt-16">
-                {/* Each item renders as <video> when its src extension is a
-                    video type (isVideo(), shared with the hero-media block
-                    above), <img> otherwise — same muted/loop treatment as
-                    the hero clip, but gated (see the IntersectionObserver
-                    effect above) rather than autoplaying unconditionally on
-                    mount. An item can carry an optional `poster`, and an
-                    optional `href` to link the whole card out to an
-                    external source instead of/alongside local media — see
-                    GalleryItemBody above. */}
-                {/* Featured frame — item 0 ("Hero"), full chapter width. */}
-                <figure
-                  ref={(el) => (galleryRefs.current[0] = el)}
-                  className={`relative mx-10 ${GALLERY_CARD}`}
-                  style={{ width: "calc(100% - 5rem)" }}
-                >
-                  <GalleryItemBody
-                    item={cs.craft.gallery[0]}
-                    index={0}
-                    videoRef={(el) => (galleryVideoRefs.current[0] = el)}
-                  />
-                </figure>
-
-                {/* Remaining seven, horizontal scroll-snap — large frames
-                    (up to 480px) with the next one deliberately left
-                    peeking at the edge as the scroll affordance. Breaks out
-                    of the chapter's own gutter via -mx-10 so it can run to
-                    the true edge, like the Result marquee does. Scrollbar
-                    hidden via plain CSS (arbitrary-property/variant escape
-                    hatches, not a new dependency) since the snap points and
-                    the peeking edge are the actual affordance. */}
-                <div
-                  ref={galleryStripRef}
-                  // data-lenis-prevent: Lenis (now mounted on this page via
-                  // ReactLenis root) does not look at event.defaultPrevented
-                  // — it only skips a wheel event if the target's ancestor
-                  // chain has this attribute (lenis.mjs's onVirtualScroll).
-                  // Without it, the onWheel handler below still converts
-                  // the notch to horizontal scrollLeft AND Lenis separately
-                  // smooth-scrolls the page vertically for the same notch —
-                  // this is what stops that double-scroll.
-                  data-lenis-prevent
-                  // No scroll-snap. It was the direct cause of the gallery
-                  // "barely moving": snapping forces every rest position
-                  // onto an item centre, so a full 100px wheel notch
-                  // resolved to 24px and a 3px line-mode notch to nothing.
-                  // Measured both mandatory and proximity — proximity still
-                  // snapped, because the items sit ~504px apart so there is
-                  // always a snap point in range. The momentum glide below
-                  // is what supplies the settled feel now, and it lands
-                  // where the visitor actually pointed.
-                  className="flex gap-6 pb-2 mt-6 overflow-x-auto -mx-10 px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  {cs.craft.gallery.slice(1).map((item, i) => {
-                    const index = i + 1;
-                    return (
-                      <figure
-                        // A link-out item (§2, href with no local src) has
-                        // no `src` to key on — fall through to href, then
-                        // caption, so the key stays stable and unique.
+                {cs.craft.galleryLayout === "editorial" ? (
+                  /* Editorial layout (currently: Editor Portfolio only, via
+                     caseStudy.craft.galleryLayout — see EditorWorkRow above).
+                     One large row per work, media alternating sides by index
+                     parity, instead of the featured-frame + horizontal-strip
+                     layout below. galleryStripRef/the wheel-conversion effect
+                     simply no-op here (their ref never attaches), and
+                     galleryRefs/galleryVideoRefs still get populated per row
+                     so the reveal + viewport-gated playback effects above
+                     keep working unchanged. */
+                  <div className="flex flex-col gap-20 px-10 md:gap-32">
+                    {cs.craft.gallery.map((item, index) => (
+                      <EditorWorkRow
                         key={item.src || item.href || item.caption}
-                        ref={(el) => (galleryRefs.current[index] = el)}
-                        className={`shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] ${GALLERY_CARD}`}
-                      >
-                        <GalleryItemBody
-                          item={item}
-                          index={index}
-                          videoRef={(el) => (galleryVideoRefs.current[index] = el)}
-                        />
-                      </figure>
-                    );
-                  })}
-                </div>
-                <p className="px-10 mt-3 text-xs tracking-wider uppercase text-ink/30">
-                  Scroll or swipe →
-                </p>
+                        item={item}
+                        index={index}
+                        mediaSide={index % 2 === 0 ? "left" : "right"}
+                        rowRef={(el) => (galleryRefs.current[index] = el)}
+                        videoRef={(el) => (galleryVideoRefs.current[index] = el)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {/* Each item renders as <video> when its src extension is a
+                        video type (isVideo(), shared with the hero-media block
+                        above), <img> otherwise — same muted/loop treatment as
+                        the hero clip, but gated (see the IntersectionObserver
+                        effect above) rather than autoplaying unconditionally on
+                        mount. An item can carry an optional `poster`, and an
+                        optional `href` to link the whole card out to an
+                        external source instead of/alongside local media — see
+                        GalleryItemBody above. */}
+                    {/* Featured frame — item 0 ("Hero"), full chapter width. */}
+                    <figure
+                      ref={(el) => (galleryRefs.current[0] = el)}
+                      className={`relative mx-10 ${GALLERY_CARD}`}
+                      style={{ width: "calc(100% - 5rem)" }}
+                    >
+                      <GalleryItemBody
+                        item={cs.craft.gallery[0]}
+                        index={0}
+                        videoRef={(el) => (galleryVideoRefs.current[0] = el)}
+                      />
+                    </figure>
+
+                    {/* Remaining seven, horizontal scroll-snap — large frames
+                        (up to 480px) with the next one deliberately left
+                        peeking at the edge as the scroll affordance. Breaks out
+                        of the chapter's own gutter via -mx-10 so it can run to
+                        the true edge, like the Result marquee does. Scrollbar
+                        hidden via plain CSS (arbitrary-property/variant escape
+                        hatches, not a new dependency) since the snap points and
+                        the peeking edge are the actual affordance. */}
+                    <div
+                      ref={galleryStripRef}
+                      // data-lenis-prevent: Lenis (now mounted on this page via
+                      // ReactLenis root) does not look at event.defaultPrevented
+                      // — it only skips a wheel event if the target's ancestor
+                      // chain has this attribute (lenis.mjs's onVirtualScroll).
+                      // Without it, the onWheel handler below still converts
+                      // the notch to horizontal scrollLeft AND Lenis separately
+                      // smooth-scrolls the page vertically for the same notch —
+                      // this is what stops that double-scroll.
+                      data-lenis-prevent
+                      // No scroll-snap. It was the direct cause of the gallery
+                      // "barely moving": snapping forces every rest position
+                      // onto an item centre, so a full 100px wheel notch
+                      // resolved to 24px and a 3px line-mode notch to nothing.
+                      // Measured both mandatory and proximity — proximity still
+                      // snapped, because the items sit ~504px apart so there is
+                      // always a snap point in range. The momentum glide below
+                      // is what supplies the settled feel now, and it lands
+                      // where the visitor actually pointed.
+                      className="flex gap-6 pb-2 mt-6 overflow-x-auto -mx-10 px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
+                      {cs.craft.gallery.slice(1).map((item, i) => {
+                        const index = i + 1;
+                        return (
+                          <figure
+                            // A link-out item (§2, href with no local src) has
+                            // no `src` to key on — fall through to href, then
+                            // caption, so the key stays stable and unique.
+                            key={item.src || item.href || item.caption}
+                            ref={(el) => (galleryRefs.current[index] = el)}
+                            className={`shrink-0 w-[78vw] sm:w-[420px] lg:w-[480px] ${GALLERY_CARD}`}
+                          >
+                            <GalleryItemBody
+                              item={item}
+                              index={index}
+                              videoRef={(el) => (galleryVideoRefs.current[index] = el)}
+                            />
+                          </figure>
+                        );
+                      })}
+                    </div>
+                    <p className="px-10 mt-3 text-xs tracking-wider uppercase text-ink/30">
+                      Scroll or swipe →
+                    </p>
+                  </>
+                )}
               </div>
             )}
             </div>
@@ -1201,10 +1342,14 @@ const ProjectPage = () => {
         </p>
       )}
 
-      {/* Links — terminal position, fixed by §4: links leave, they don't
-          lead, so nothing follows this section. Sized up to close the page
-          with real weight rather than trailing off — matching the intent
-          behind Contact's own closing register on the home page. */}
+      {/* Links — terminal content per §4 (links leave, they don't lead —
+          nothing content-bearing follows). Sized up to close the page with
+          real weight rather than trailing off — matching the intent behind
+          Contact's own closing register on the home page. The one thing
+          that does follow is pure navigation, not content: a "Back to
+          Home" CTA (below) for visitors who reach the bottom without their
+          origin tab (§2's new-tab rule covers the Works-click case, not a
+          visitor who arrived directly via search or a shared link). */}
       <div className="flex gap-10 px-10 py-24 mt-24 text-base tracking-widest uppercase md:py-32 md:text-lg">
         {project.liveHref && (
           <a
@@ -1238,6 +1383,20 @@ const ProjectPage = () => {
             Code ↗
           </a>
         )}
+      </div>
+
+      {/* Back to Home — an explicit end-of-case-study CTA, mirroring the
+          top nav's Link/target/hover language but placed here as the
+          case study's own closing beat for visitors who reach the bottom
+          without their origin tab still open. */}
+      <div className="flex justify-center px-10 pt-16 pb-24 border-t border-[var(--color-border)] md:pb-32">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--color-accent)] transition-colors hover:text-ink"
+        >
+          <Icon icon="lucide:arrow-left" className="size-4" />
+          Back to Home
+        </Link>
       </div>
     </main>
     </ReactLenis>

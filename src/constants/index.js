@@ -195,6 +195,14 @@ export const projects = [
     poster: "/assets/projects/editor-portfolio/work-01-poster.jpg",
     bgImage: "/assets/backgrounds/poster.jpg",
     featured: false,
+    // This project's own Work 01 clip already opens the case study a second
+    // time inside caseStudy.craft.gallery[0] — the generic hero-media block
+    // ProjectPage.jsx renders for every non-cinematicIntro project (same
+    // clip, same poster) is therefore a duplicate standalone video ahead of
+    // the actual gallery, not a second piece of content. Same shared
+    // hero-media block MediHelp still renders normally; this flag only
+    // skips it here.
+    hideHeroMedia: true,
     seo: {
       title: "Editor Portfolio - Dagim Demissie",
       description:
@@ -221,6 +229,12 @@ export const projects = [
           "The work spans opening a piece with a hook strong enough to earn the next few seconds, building pacing and rhythm around what a piece is actually saying, and pulling the sharpest moments out of hours of raw or long-form footage rather than using it in order. It covers B-roll selection, captions and subtitles, motion graphics, sound design and audio cleanup, color correction and grading, and shaping visual emphasis differently depending on where a piece is going to be watched - a long-form YouTube video and a vertical short are never cut with the same instincts.",
         myRole:
           "Independent video editor across every piece in this collection - responsible for turning raw or long-form source material into finished, platform-ready edits.",
+        // Alternating editorial rows (ProjectPage.jsx's EditorWorkRow),
+        // replacing the shared horizontal-strip renderer for this project
+        // only - six standalone client/freelance pieces read better as
+        // individual case-study moments than as strip cards. MediHelp's own
+        // craft.gallery has no such key, so it keeps the strip unchanged.
+        galleryLayout: "editorial",
         // Six real pieces. Work 01/02 are locally hosted (own footage,
         // clients whose work can be shown directly); Work 10/07/05/08 are
         // re-edits of other creators'/platforms' source footage or other

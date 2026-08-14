@@ -28,9 +28,13 @@ import { projects } from "../constants/index.js";
 // fall back to `process.env` there. Unset falls back to "", which keeps the
 // existing "omit rather than fabricate" behavior: a wrong canonical actively
 // misdirects crawlers, so absence is preferred to a guess.
+// globalThis.process (not bare `process`) so this passes lint under the
+// project's browser-only eslint globals — `process` isn't a declared global
+// there, but globalThis always is, and optional chaining no-ops in the
+// browser where globalThis.process doesn't exist.
 const env =
   (typeof import.meta !== "undefined" && import.meta.env) ||
-  (typeof process !== "undefined" && process.env) ||
+  globalThis.process?.env ||
   {};
 export const SITE_URL = env.VITE_SITE_URL ?? "";
 
