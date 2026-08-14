@@ -31,27 +31,8 @@ future directions, not planned work:
 - Additional motion experiments (secondary/settle motion, different idle
   rhythms, etc).
 
-## Signature Reel
-
-The cinematic intro (hero, 3D video constellation, scroll flythrough, reel
-arrival/enlarge/sticky-hold) is built — see `PROJECT_STATUS.md`'s
-Signature Reel Cinematic Intro milestone. Deliberately not part of that
-phase:
-
-- **BeU Delivery** — a bento-grid graphic-design showcase, planned as the
-  next major section after Signature Reel. Layout, images, animation,
-  hierarchy, interaction, and copy are all still undefined; explicitly
-  scoped out until a dedicated pass.
-- Challenge/Approach/Craft/Result/Credits narrative copy for Signature
-  Reel itself — not a design idea, a real content gap. The exact missing
-  pieces are enumerated in `PROJECT_STATUS.md`'s milestone entry rather
-  than duplicated here.
-
 ## Other Future Ideas
 
-- Per-route SEO/share metadata for `/projects/:slug` pages — currently
-  unresolved because this is a Vite SPA with no pre-rendering/SSG/SSR
-  (flagged in `PROJECT_STATUS.md` §5 as deliberately deferred).
 - Revisit the two dead template images in `public/assets/projects/`
   (`apple-tech-store.jpg`, `electronics-store.jpg`, `home-decor-store.jpg`,
   `mobile-accessories-store.jpg`, `plant-shop.jpg`) — unreferenced
