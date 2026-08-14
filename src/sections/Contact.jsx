@@ -1,6 +1,7 @@
 import { useGSAP } from "@gsap/react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
+import ContactForm from "../components/ContactForm";
 import Marquee from "../components/Marquee";
 import { socials, socialIcons } from "../constants";
 import gsap from "gsap";
@@ -74,6 +75,7 @@ const Contact = () => {
                 ))}
               </div>
             </div>
+            <ContactForm />
           </div>
         </div>
       </div>

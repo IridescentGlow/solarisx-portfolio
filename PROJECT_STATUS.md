@@ -49,6 +49,10 @@ Stages 1-4 complete: GLB/material/lighting/motion, video textures, hover, proxim
 grab/drag/momentum. No further stages planned.
 
 ## Known open items
+- Contact form: implemented (`api/contact.mjs` + `ContactForm.jsx` in the Final Frame, Resend
+  provider). See `docs/engineering/CONTACT_FORM_ARCHITECTURE.md`. Requires external setup
+  (Resend account + `RESEND_API_KEY`/`CONTACT_TO_EMAIL` in Vercel) before it can send real mail
+  in production — not yet configured there as of this pass.
 - SEO/share metadata: per-route <title>/description/OG/Twitter shipped and live in production
   — see Deployment section above. No longer open.
 - ProjectPage.jsx metadata-row mount tween fires offscreen for cinematicIntro projects — needs scroll-triggered version, deferred.
