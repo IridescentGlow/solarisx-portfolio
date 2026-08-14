@@ -22,11 +22,15 @@ const fieldErrors = (name, email, message) => {
   return errors;
 };
 
+// Outline width/offset stay constant; only the color toggles on
+// focus-visible. Tailwind v4's outline-* utilities share a single
+// --tw-outline-style custom property, so pairing `outline-none` with
+// `focus-visible:outline-2` on the same element can leave no visible ring
+// at all — this avoids that by never touching outline-style.
 const inputClasses =
   "w-full bg-surface-1 border rounded-sm px-4 py-3 text-body text-ink " +
   "placeholder:text-text-tertiary transition-colors duration-150 ease-precise " +
-  "focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 " +
-  "focus-visible:outline-accent";
+  "outline outline-2 outline-offset-2 outline-transparent focus-visible:outline-accent";
 
 const Field = ({ id, label, error, as = "input", ...props }) => {
   const Tag = as;
@@ -58,6 +62,7 @@ const Field = ({ id, label, error, as = "input", ...props }) => {
 
 const ContactForm = () => {
   const [values, setValues] = useState({ name: "", email: "", message: "" });
+  const [company, setCompany] = useState(""); // honeypot — real visitors never touch this
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [serverError, setServerError] = useState("");
@@ -86,8 +91,11 @@ const ContactForm = () => {
           name,
           email,
           message,
-          company: "",
-          startedAt: mountedAt.current,
+          company,
+          // Elapsed time, not an absolute timestamp — comparing a client
+          // clock to the server's would silently drop real submissions
+          // whenever the visitor's clock runs fast.
+          elapsedMs: Date.now() - mountedAt.current,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -110,100 +118,102 @@ const ContactForm = () => {
     }
   };
 
-  if (status === "success") {
-    return (
-      <div className="social-link">
-        <h2>Message</h2>
-        <div className="w-full h-px my-2 bg-ink/30" />
-        <p
-          role="status"
-          className="text-body text-text-secondary normal-case tracking-normal"
-        >
-          Message sent — thanks for reaching out. I read every message and
-          reply from {" "}
-          <span className="lowercase">contactphazotron@gmail.com</span>.
-        </p>
-      </div>
-    );
-  }
+  // Present from first render (not inserted on success) so screen readers
+  // reliably pick up the announcement — a live region added at the moment
+  // its content changes is read inconsistently across screen readers.
+  const liveMessage =
+    status === "success"
+      ? "Message sent — thanks for reaching out. I read every message and reply personally."
+      : status === "error"
+        ? serverError
+        : "";
 
   return (
     <div className="social-link">
       <h2>Message</h2>
       <div className="w-full h-px my-2 bg-ink/30" />
-      <form
-        onSubmit={onSubmit}
-        noValidate
-        className="flex flex-col gap-6 normal-case tracking-normal"
-      >
-        <p className="text-body-sm text-text-tertiary">
-          Have a project, a role, or an idea worth talking through? Send a
-          few details — I read every message myself.
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </div>
+
+      {status === "success" ? (
+        <p className="text-body text-text-secondary normal-case tracking-normal">
+          Message sent — thanks for reaching out. I read every message and
+          reply personally.
         </p>
+      ) : (
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          className="flex flex-col gap-6 normal-case tracking-normal"
+        >
+          <p className="text-body-sm text-text-tertiary">
+            Have a project, a role, or an idea worth talking through? Send a
+            few details — I read every message myself.
+          </p>
 
-        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Field
+              id="contact-name"
+              label="Name"
+              type="text"
+              autoComplete="name"
+              value={values.name}
+              onChange={onChange("name")}
+              error={errors.name}
+              maxLength={LIMITS.name}
+            />
+            <Field
+              id="contact-email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={values.email}
+              onChange={onChange("email")}
+              error={errors.email}
+              maxLength={LIMITS.email}
+            />
+          </div>
+
           <Field
-            id="contact-name"
-            label="Name"
+            id="contact-message"
+            label="Message"
+            as="textarea"
+            rows={5}
+            value={values.message}
+            onChange={onChange("message")}
+            error={errors.message}
+            maxLength={LIMITS.messageMax}
+          />
+
+          {/* Honeypot — hidden from sighted and screen-reader users, never
+              tab-reachable. A non-empty value tells api/contact.mjs to
+              silently drop the submission. */}
+          <input
             type="text"
-            autoComplete="name"
-            value={values.name}
-            onChange={onChange("name")}
-            error={errors.name}
-            maxLength={LIMITS.name}
+            name="company"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="hidden"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
           />
-          <Field
-            id="contact-email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            value={values.email}
-            onChange={onChange("email")}
-            error={errors.email}
-            maxLength={LIMITS.email}
-          />
-        </div>
 
-        <Field
-          id="contact-message"
-          label="Message"
-          as="textarea"
-          rows={5}
-          value={values.message}
-          onChange={onChange("message")}
-          error={errors.message}
-          maxLength={LIMITS.messageMax}
-        />
-
-        {/* Honeypot — hidden from sighted and screen-reader users, never
-            tab-reachable. A filled value tells api/contact.mjs to silently
-            drop the submission. */}
-        <input
-          type="text"
-          name="company"
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden="true"
-          className="hidden"
-          value=""
-          onChange={() => {}}
-        />
-
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="shrink-0 px-8 py-3 text-body-sm uppercase tracking-[0.12em] rounded-sm bg-accent text-bg-base transition-colors duration-150 ease-precise hover:bg-accent-dim disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            {status === "loading" ? "Sending…" : "Send message"}
-          </button>
-          {status === "error" && (
-            <p role="alert" className="text-body-sm text-state-error">
-              {serverError}
-            </p>
-          )}
-        </div>
-      </form>
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="shrink-0 px-8 py-3 text-body-sm uppercase tracking-[0.12em] rounded-sm bg-accent text-bg-base transition-colors duration-150 ease-precise hover:bg-accent-dim disabled:opacity-50 disabled:cursor-not-allowed outline outline-2 outline-offset-2 outline-transparent focus-visible:outline-accent"
+            >
+              {status === "loading" ? "Sending…" : "Send message"}
+            </button>
+            {status === "error" && (
+              <p className="text-body-sm text-state-error">{serverError}</p>
+            )}
+          </div>
+        </form>
+      )}
     </div>
   );
 };

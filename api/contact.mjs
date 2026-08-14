@@ -93,9 +93,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  // Minimum fill time: startedAt is a client-set mount timestamp (ms).
-  const startedAt = Number(body.startedAt);
-  if (Number.isFinite(startedAt) && Date.now() - startedAt < MIN_FILL_MS) {
+  // Minimum fill time: elapsedMs is client-measured (Date.now() at submit
+  // minus Date.now() at mount), not an absolute timestamp — comparing a
+  // client clock to the server's would silently drop genuine submissions
+  // whenever the visitor's clock runs fast. Missing/invalid is treated as
+  // suspicious rather than skipped, since a legitimate client always sends
+  // a valid number.
+  const elapsedMs = Number(body.elapsedMs);
+  if (!Number.isFinite(elapsedMs) || elapsedMs < MIN_FILL_MS) {
     return res.status(200).json({ ok: true });
   }
 
