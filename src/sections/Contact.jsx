@@ -43,6 +43,9 @@ const Contact = () => {
           text={text}
           textColor={"text-ink"}
           withScrollTrigger={true}
+          // COMPOSITION_PRINCIPLES.md §2: the Final Frame's symmetry mirrors
+          // the Opening Frame's — a bookend, resolution answering the open.
+          layout="centered"
         />
         <div className="flex px-10 font-light text-ink uppercase lg:text-[32px] text-[26px] leading-none mb-10">
           <div className="flex flex-col w-full gap-10">

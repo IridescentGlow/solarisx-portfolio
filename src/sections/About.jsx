@@ -45,6 +45,11 @@ I work by exploring, building, reviewing, then polishing until a thing feels ine
         text={text}
         textColor={"text-ink"}
         withScrollTrigger={true}
+        // COMPOSITION_PRINCIPLES.md §2/§3: the Context Layer is the one frame
+        // the canonical composition doc explicitly asks to become genuinely
+        // asymmetric — a text block placed toward one side with real negative
+        // space opposite it, not a centered container that left-aligns.
+        layout="offset"
       />
       <div className="flex flex-col items-center justify-between gap-16 px-10 pb-16 text-xl font-light tracking-wide lg:flex-row md:text-2xl lg:text-3xl text-ink/60">
         {/* TODO(content): replace with a real portrait — this is the template's stock photo */}

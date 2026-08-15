@@ -34,6 +34,10 @@ const Services = () => {
         text={text}
         textColor={"text-ink"}
         withScrollTrigger={true}
+        // COMPOSITION_PRINCIPLES.md §2: the Capability Map is a symmetric
+        // frame — grid symmetry signals "a set," not "a sequence." The
+        // centered header is what makes the accordion below read as one.
+        layout="centered"
       />
       {servicesData.map((service, index) => (
         <div
