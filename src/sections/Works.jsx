@@ -315,7 +315,7 @@ const Works = () => {
               }`}
             />
             {/* stack */}
-            <div className="flex px-10 text-xs leading-loose uppercase transtion-all duration-500 md:text-sm gap-x-5 md:group-hover:px-12">
+            <div className="flex flex-wrap px-10 text-xs leading-loose uppercase transtion-all duration-500 md:text-sm gap-x-5 md:group-hover:px-12">
               {project.stack.map((tech) => (
                 <p
                   key={tech}
@@ -341,13 +341,13 @@ const Works = () => {
                   playsInline
                   preload="metadata"
                   aria-label={`${project.name} preview`}
-                  className="absolute bg-center px-14 rounded-xl"
+                  className="absolute inset-0 object-cover w-full h-full px-14 rounded-xl"
                 />
               ) : (
                 <img
                   src={project.image}
                   alt={`${project.name}-image`}
-                  className="absolute bg-center px-14 rounded-xl"
+                  className="absolute inset-0 object-cover w-full h-full px-14 rounded-xl"
                 />
               )}
             </div>

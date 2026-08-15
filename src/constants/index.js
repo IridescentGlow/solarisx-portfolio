@@ -256,6 +256,10 @@ export const projects = [
             alt: "Senai English ad campaign edit",
             caption:
               "Senai English - campaign edit balancing education, persuasion, and a clear commercial message.",
+            // ffprobe'd source dimensions: 720x1280, a genuine portrait
+            // clip — EditorWorkRow gives portrait items their own framing
+            // instead of cropping them into the landscape items' 16:9 box.
+            orientation: "portrait",
           },
           {
             href: "https://youtu.be/-PMsvyKB_7g",
@@ -270,6 +274,8 @@ export const projects = [
             alt: "IsaacELera short-form edit",
             caption:
               "IsaacELera - livestream footage adapted into a fast, hook-driven short.",
+            // ffprobe'd source: 360x640 portrait (a YouTube Short).
+            orientation: "portrait",
           },
           {
             href: "https://youtu.be/Y28NN1U7MNE",
@@ -284,6 +290,8 @@ export const projects = [
             alt: "Lip filler advertisement edit",
             caption:
               "A beauty/advertising edit built for visual polish and a clear product message.",
+            // ffprobe'd source: 360x640 portrait (a Short).
+            orientation: "portrait",
           },
         ],
       },

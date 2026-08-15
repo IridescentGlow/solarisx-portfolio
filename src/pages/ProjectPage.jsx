@@ -310,8 +310,16 @@ const EditorWorkRow = ({ item, index, mediaSide, videoRef }) => {
     </span>
   );
 
+  // Mixed source aspect ratios (constants/index.js's `orientation`, set from
+  // each clip's own ffprobe'd dimensions): forcing a genuinely portrait clip
+  // (work-02, work-07, work-08 — 720x1280/360x640 sources) into the same
+  // 16:9 frame as the landscape pieces crops away most of the footage via
+  // object-cover. Portrait items get their own 9:16 frame instead, so the
+  // full shot survives rather than a cropped sliver of it.
+  const isPortrait = item.orientation === "portrait";
+
   const mediaFrame = (
-    <div className="relative overflow-hidden aspect-video">
+    <div className={`relative overflow-hidden ${isPortrait ? "aspect-[9/16]" : "aspect-video"}`}>
       {/* Hover/focus blur on the footage itself — modest (2px), so the frame
           stays recognizable rather than turning abstract; combined with the
           existing hover-scale (GALLERY_IMG) via the same transitioned
@@ -321,18 +329,33 @@ const EditorWorkRow = ({ item, index, mediaSide, videoRef }) => {
     </div>
   );
 
+  // A 9:16 frame at the same full column width the 16:9 frames use would
+  // tower over its own row (nearly double the column's width in height) and
+  // dwarf the text beside it. Capping the portrait frame's own width and
+  // centering it keeps it reading as a deliberate "phone/vertical clip"
+  // frame — proportioned like the footage actually is — rather than a
+  // stretched slab; landscape items are untouched (no cap, same full-width
+  // frame as before this change).
   const mediaBlock = item.href ? (
     <a
       href={item.href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={item.alt || item.caption}
-      className={`relative block ${GALLERY_CARD}`}
+      className={`relative block ${GALLERY_CARD} ${
+        isPortrait ? "mx-auto w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px]" : ""
+      }`}
     >
       {mediaFrame}
     </a>
   ) : (
-    <div className={`relative ${GALLERY_CARD}`}>{mediaFrame}</div>
+    <div
+      className={`relative ${GALLERY_CARD} ${
+        isPortrait ? "mx-auto w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px]" : ""
+      }`}
+    >
+      {mediaFrame}
+    </div>
   );
 
   return (
