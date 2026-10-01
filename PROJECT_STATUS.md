@@ -4,6 +4,14 @@ Portable status snapshot. Full milestone history: docs/CHANGELOG_ARCHIVE.md (rea
 Design/engineering rules: docs/START_HERE.md.
 
 ## Last updated
+**Phase 1 closed; fonts on woff2 (2026-10-01.)** All 19 canonical tokens
+(`DESIGN_SYSTEM_TOKENS.md` §2/§4) were already implemented, so Phase 1's real deliverable was
+§2's unmet woff2 action item: Amiamie converted (419 glyphs/face preserved), woff2 first in
+`@font-face`, Light+Regular preloaded. Fonts 134 -> 81 KiB and **FCP 4.1s -> 3.3s**.
+`BLUEPRINT.md` §0.11. **Gap 2's per-frame type-scale premise was struck** as contrary to
+canonical `HIERARCHY_SYSTEM.md` §1/§2/§4 ("hierarchy through contrast, not volume") — decided
+with the site owner; Phases 1/6 and the DoD checklist amended inline.
+
 **Media load fixed; redesign Phase 0 complete (2026-10-01.)** Homepage initial transfer cut
 20,425 -> 5,111 KiB (media 17,638 -> 2,237 KiB) by lazy-loading Works preview clips on
 intersection and re-encoding the six star texture clips 1280x720 -> 640x360. Full detail:
@@ -62,11 +70,17 @@ Stages 1-4 complete: GLB/material/lighting/motion, video textures, hover, proxim
 grab/drag/momentum. No further stages planned.
 
 ## Current milestone
-**Next: BLUEPRINT.md Phase 1 — design tokens (typography + motion).** Unblocked as of
-2026-10-01, when `docs/` was restored and the canonical token/hierarchy specs became readable.
-Per-frame type-scale tokens per `DESIGN_SYSTEM_TOKENS.md` and `HIERARCHY_SYSTEM.md`. Note any
-token change must be made in BOTH `src/index.css` and `src/lib/motion.js`, which mirrors the
-curves as GSAP `CustomEase`s.
+**Phase 1 — design tokens: COMPLETE (2026-10-01).** Tokens were already in place; the woff2
+conversion was the actual work. See "Last updated" and `BLUEPRINT.md` §0.11.
+
+**Next: BLUEPRINT.md Phase 2 — signature motif system.** Build the full/reduced/minimal states
+of the Gemini star. Two constraints carried in from Phase 0: the blueprint's revised Section 9
+bars a crystal/triangle mark (already satisfied — the motif is a star carrying the owner's own
+reel footage, `BLUEPRINT.md` §0.9), and the reduced/minimal states double as the remaining
+performance fix, since a line- or mark-form state carries no video (§0.10).
+
+Note any token change must be made in BOTH `src/index.css` and `src/lib/motion.js`, which
+mirrors the curves as GSAP `CustomEase`s.
 
 **Tier 1.1 — Frame composition system: BUILT AND SHIPPED.** The additive `layout` prop on
 `AnimatedHeaderSection` (`split` default / `centered` / `offset`) exists, and the per-frame
@@ -87,6 +101,15 @@ Hero remains deliberately excluded (Tier 1.2).
   portrait leftovers from the removed star side panels. Removal candidate, decision pending.
 - `/assets/backgrounds/{curtains,poster,map}.jpg` are 565–604 KiB each and still load eagerly as
   `bgImage` — the next-largest media win after the 2026-10-01 pass.
+- **Canonical tokens exist but components do not consume them.** `AnimatedHeaderSection` still
+  uses Tailwind utilities and the bespoke `banner-text-responsive` rather than `--text-display` /
+  `--text-h1`. Real work that no blueprint phase currently owns — see `BLUEPRINT.md` §0.11.
+- Accent `#CFA355` has never been contrast-validated for *text* use against the dark background
+  (`DESIGN_SYSTEM_TOKENS.md` §7's own open item), and `/` still has 24 `color-contrast`
+  failures (a11y 96). The two are likely the same problem; neither is addressed.
+- `public/fonts/amiamie/{otf,ttf}` (1.6 MB) are retained as `@font-face` fallbacks behind woff2.
+  Removal would need a decision about non-woff2 browser support; the 3 `Amiamie-Round` faces are
+  reserved/unused per `DESIGN_SYSTEM_TOKENS.md` §2 and stayed on otf/ttf.
 - `docs/` still has **no `.gitmodules` entry** — restoring the checkout did not change that, so
   it remains a gitlink-without-submodule needing a separate push plus a parent gitlink bump.
 - Contact form: complete and verified in production. No longer open — see "Last updated" above.

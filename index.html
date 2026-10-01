@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Critical font weights only, per DESIGN_SYSTEM_TOKENS.md §2.
+         Light (300) carries nearly all body copy (20 `font-light` call
+         sites in src/ vs 2 `font-normal` and 0 `font-black`), and Regular
+         (400) is what `banner-text-responsive` inherits from body, so these
+         two are what the first screen actually paints with. The remaining
+         faces — including LightItalic, which does load on the homepage but
+         below the fold — are deliberately NOT preloaded: preloading every
+         weight competes with the render-critical requests and defeats the
+         point. `crossorigin` is required even same-origin, or the fetch is
+         made twice. -->
+    <link rel="preload" href="/fonts/amiamie/woff2/Amiamie-Light.woff2"
+      as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/amiamie/woff2/Amiamie-Regular.woff2"
+      as="font" type="font/woff2" crossorigin />
     <meta name="theme-color" content="#0B0A09" />
 
     <meta name="author" content="Dagim Demissie" />

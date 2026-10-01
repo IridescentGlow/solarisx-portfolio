@@ -118,6 +118,7 @@ The foundation — stack, structure, content model, and even the correct self-di
 - CURRENT: Heading weight/scale is identical across all five frames.
 - TARGET: Each frame gets a distinct typographic weight-class matched to its role — e.g. Hero at maximum scale/minimum words, About at editorial paragraph-weight, Capabilities at systematic label-scale — per the already-written Hierarchy System doc.
 - WHY: Undifferentiated headings flatten pacing. The reference uses type-scale changes between sections as a pacing device as much as color; right now the site has the color-story tools but not the type-story tools.
+- **> SUPERSEDED 2026-10-01 — see §0.11.** The TARGET above contradicts canonical `HIERARCHY_SYSTEM.md` §1/§2/§4, which forbids solving hierarchy with size. Gap 2's CURRENT line is also out of date: per-frame differentiation shipped structurally via the `layout` prop. Do not implement per-frame type scale.**
 
 **Gap 3 — Signature visual motif**
 - CURRENT: The 3D hero functions as a one-time opener.
@@ -149,6 +150,8 @@ Keep the evidence-based order: **Hero → Selected Work → About → Capabiliti
 ---
 
 ## 7. Typography System
+
+> **SUPERSEDED 2026-10-01 — see §0.11.** This section's per-frame scale prescriptions were written without access to `HIERARCHY_SYSTEM.md`, and conflict with it: the canonical doc's §1 is "hierarchy through contrast, not volume — the strongest frame does not get bigger", and its §2 excludes size increases from the permitted mechanisms entirely. Apply the Hierarchy System doc as the literal spec, as the line below says — but **without** the constraints this blueprint stacked on top of it. They are retained here only as the superseded record.
 
 Apply the existing Hierarchy System doc as the literal spec; this blueprint adds the following constraints on top of it:
 - **Hero:** maximum scale, fewest words, Amiamie at its most sculptural weight — the frame that says the least and takes up the most visual space
@@ -245,8 +248,8 @@ Retain React Three Fiber, but scope it deliberately:
 ## 16. Design System Tokens
 
 Extend the existing token set (which already includes `--ease-connective`) with:
-- Per-frame typographic scale tokens (Section 7)
-- Two motion-curve tokens: connective (frame handoffs) and interactive (micro-interactions)
+- ~~Per-frame typographic scale tokens (Section 7)~~ — **struck, see §0.11.** Contrary to `HIERARCHY_SYSTEM.md`; the canonical scale in `DESIGN_SYSTEM_TOKENS.md` §2 is global, not per-frame, and is already fully implemented.
+- ~~Two motion-curve tokens: connective (frame handoffs) and interactive (micro-interactions)~~ — **already built.** Canon defines *four* curves and all four exist in `src/index.css` and `src/lib/motion.js` (§0.2).
 - Per-project palette tokens, scoped so they don't leak into global theme
 - Signature-motif material tokens (the states from Section 9)
 
@@ -277,11 +280,10 @@ Because this session couldn't inspect the live repo, this section defines the *k
 - Acceptance criteria: A filled-in version of the Section 17 table with real paths; a baseline performance/accessibility report; an explicit decision on `/work/[slug]` vs `/projects/:slug`
 - Do NOT change: Any actual code yet
 
-**Phase 1 — Design Tokens (Typography + Motion)**
+**Phase 1 — Design Tokens (Typography + Motion)** — **COMPLETE 2026-10-01, see §0.11**
 - Objective: Implement Section 7 and Section 16's token additions
 - Prerequisites: Phase 0
-- Work: Add per-frame type-scale tokens; define and implement the two motion-curve tokens; wire `--ease-connective` so it's referenced (even before the orchestration logic that will use it exists)
-- Acceptance criteria: Tokens exist, are documented, and are referenced by at least a placeholder in each frame's heading component
+- Outcome: **All 19 canonical tokens from `DESIGN_SYSTEM_TOKENS.md` §2 and §4 were already present** in `src/index.css` at the documented values — the full type scale, `--content-max-width: 65ch`, four easing curves and four durations. The per-frame type-scale work was struck as contrary to `HIERARCHY_SYSTEM.md`. The one genuinely unmet canonical item in §2 — "convert `.otf`/`.ttf` to `.woff2` before implementation" — **was done** (§0.11), which is what this phase actually delivered.
 - Do NOT change: Visual layout yet — this phase is tokens only
 
 **Phase 2 — Signature Motif System**
@@ -308,10 +310,10 @@ Because this session couldn't inspect the live repo, this section defines the *k
 - Work: Finalize `/work/[slug]`; build per-project palette scoping (Section 16); implement the consistent metadata block; complete whatever remained in-progress from the prior case-study system work
 - Acceptance criteria: At least two real projects render with distinct palettes but identical metadata-block layout
 
-**Phase 6 — About / Capabilities Hierarchy Application**
-- Objective: Apply Section 7's editorial and systematic type treatments to these two frames specifically
+**Phase 6 — About / Capabilities Hierarchy Application** — **REFRAMED, see §0.11**
+- Objective: ~~Apply Section 7's editorial and systematic type treatments~~ → Apply `HIERARCHY_SYSTEM.md` §3's **pacing / density / restraint** treatment to these two frames. Note §3 explicitly credits Capability Map as having *already* solved this via its grid density, and warns: "don't undo it by adding a heading-size change on top of a mechanism that's already working."
 - Prerequisites: Phase 1
-- Acceptance criteria: About reads as editorial copy; Capabilities reads as a systematic toolkit, not a list — reviewed side by side with Hero to confirm they're now visually distinct registers
+- Acceptance criteria: About reads as editorial copy; Capabilities reads as a systematic toolkit, not a list — achieved through surrounding pause, element count and measure, **not** type size. Each frame must still have exactly one focal point per `HIERARCHY_SYSTEM.md` §5.
 
 **Phase 7 — Contact & Real Email Provider**
 - Objective: Replace the simulated submission with a live provider
@@ -395,7 +397,7 @@ Phase 7 (Contact) has no dependency on the motion/visual chain and can run any t
 - [ ] A first-time visitor can articulate "what this person does" within the Hero alone
 
 **Visual**
-- [ ] Each frame is typographically distinct (Gap 2 closed)
+- [ ] Each frame is **compositionally** distinct (Gap 2, as reframed in §0.11 — distinctness via `layout` + pacing/density/restraint, not type size)
 - [ ] The signature motif appears in at least three states across the site (Section 9)
 - [ ] No section relies on a generic AI/SaaS-gradient treatment
 
@@ -869,6 +871,108 @@ work against.
   still load eagerly as `bgImage`. Next-largest win after this pass.
 - The single JS chunk is 1,513 KiB (447 KiB gzipped) and still warns at build; route-based
   code-splitting is deferred per `FUTURE_IMPLEMENTATIONS.md`.
+
+---
+
+---
+
+## 0.11 Phase 1 — closed, and Gap 2 reframed against canon (2026-10-01)
+
+First phase executed with the canonical docs actually readable. Two findings, one of which
+changes the redesign plan.
+
+### Phase 1's tokens were already fully implemented
+
+Every token in `DESIGN_SYSTEM_TOKENS.md` §2 and §4 is already present in `src/index.css`, at the
+documented values — verified token by token:
+
+- **§2 type scale (10/10):** `--text-display`, `--text-h1`, `--text-h2`, `--text-h3`,
+  `--text-body-lg`, `--text-body`, `--text-body-sm`, `--text-label`, `--text-caption`,
+  `--content-max-width: 65ch`
+- **§4 motion (8/8):** `--ease-precise`, `--ease-cinematic`, `--ease-connective`,
+  `--ease-revelation`, `--duration-micro`, `--duration-transition`, `--duration-reveal`,
+  `--duration-revelation` — and all four curves are mirrored in `src/lib/motion.js` as GSAP
+  `CustomEase`s (§0.2)
+
+So Phase 1's "add tokens" work was a no-op. Its remaining item was contrary to canon, below.
+
+### Gap 2's premise contradicts `HIERARCHY_SYSTEM.md` — struck on the user's decision
+
+Phase 1's last task was "add per-frame type-scale tokens", the implementation of **Gap 2** and
+Section 7. Canonical `HIERARCHY_SYSTEM.md` — written, per its own header, from the very critique
+Gap 2 is derived from — prohibits exactly that:
+
+| `HIERARCHY_SYSTEM.md` | Says |
+|---|---|
+| §1 (The Governing Rule) | "Hierarchy through contrast, not volume. **The strongest frame does not get bigger.** Everything around it gets quieter so it can land." Called "not optional texture — the test every hierarchy decision has to pass." |
+| §2 (The Test) | Permitted mechanisms, in order: **pacing, density, restraint**, then composition/motion. "**Size/color increases are not on this list.**" |
+| §4 | "**Explicitly not: larger type size** for the lead row. Size is the last resort, not the first." |
+| §3 | On Capability Map: "**don't undo it** by adding a heading-size change on top of a mechanism that's already working." |
+
+The blueprint prescribed the opposite ("Hero at maximum scale", "About at editorial
+paragraph-weight", "Capabilities at label-scale"). `CLAUDE.md` gives canon precedence, and the
+blueprint is a root-level phase document, not canonical.
+
+**Decision (user, 2026-10-01): canon wins.** Gap 2's size premise is struck. Supersede markers
+are now inline at Gap 2, Section 7, Section 16, Phase 1, Phase 6 and the Section 21 checklist so
+no future session implements the struck version.
+
+**Gap 2's actual intent is already satisfied.** Per-frame distinctness shipped structurally in
+Tier 1.1's `layout` prop — `split` / `centered` / `offset`, where the full-bleed rule is
+`split`'s signature, inset in `centered` and absent in `offset`. That is contrast without
+volume: precisely the mechanism §1 calls for. Residual work belongs to Phase 6, reframed to
+pacing/density/restraint.
+
+Worth noting the canonical type scale is **global and role-based** (`--text-display` for the
+opening headline, `--text-h1` for frame titles), not per-frame. A per-frame scale would have
+fought the system it was supposedly extending.
+
+### What Phase 1 actually delivered: the woff2 conversion
+
+`DESIGN_SYSTEM_TOKENS.md` §2 carries one explicit, unmet action item: *"convert `.otf`/`.ttf`
+source files to `.woff2` before implementation — required for load performance, not currently in
+the template's asset set."* Zero `.woff2` existed; five `@font-face` rules served OTF with TTF
+fallback and nothing was preloaded.
+
+- Converted the six `Amiamie` faces to `.woff2` via `fontTools` (`public/fonts/amiamie/woff2/`).
+  **All 419 glyphs preserved per face**, verified by reloading each output.
+- `src/index.css` now lists `woff2` first in each of those six `src` stacks, keeping otf/ttf as
+  fallback rather than deleting them — a browser without woff2 still needs a source and the files
+  are already in the repo.
+- The three `Amiamie-Round` faces are deliberately left on otf/ttf: §2 lists Round/Italic
+  variants as "Reserved, not in default scale", and nothing in `src/` references that family.
+- Added `rel="preload"` for **Light (300) and Regular (400) only**. Chosen on evidence, not
+  taste: `src/` has 20 `font-light` call sites against 2 `font-normal` and **0** `font-black`,
+  and `banner-text-responsive` sets no weight so it inherits Regular from `body`. LightItalic
+  does load on the homepage but below the fold, so preloading it would compete with
+  render-critical requests. `crossorigin` is required even same-origin or the font is fetched
+  twice.
+
+**Verified (Lighthouse 12.8.2, mobile, simulated):**
+
+| Metric | Before | After |
+|---|---|---|
+| Fonts transferred | 134 KiB (3 × `.otf`) | **81 KiB (3 × `.woff2`), −40%** |
+| **First Contentful Paint** | 4.1 s | **3.3 s, −0.8 s** |
+| Speed Index | 4.1 s | **3.3 s** |
+| Total transfer | 5,111 KiB | 5,059 KiB |
+| a11y / best-practices / SEO | 96 / 100 / 92 | **96 / 100 / 92**, no regression |
+| `font-display` audit | — | pass |
+
+FCP had been pinned at 4.1 s through the entire media pass; the font preload is the first change
+to move it. `npm run lint` clean, `npm run build` green, and the preload tags survive
+`prerender-meta.mjs` on `/` and every `/projects/:slug`.
+
+### Still open
+
+- `NO_LCP` on the homepage is unchanged (§0.10) — still the blocker on any `/` performance score.
+- `DESIGN_SYSTEM_TOKENS.md` §7's own open item stands: the accent `#CFA355` has never been
+  contrast-validated against the dark background for *text* use. Related to §0.6's 24
+  `color-contrast` failures; neither has been addressed.
+- The canonical tokens exist but are **not yet consumed** by components — `AnimatedHeaderSection`
+  still uses Tailwind utility classes and the bespoke `banner-text-responsive` rather than
+  `--text-display` / `--text-h1`. Wiring components onto the token scale is real, unscheduled
+  work that no blueprint phase currently owns.
 
 ---
 
