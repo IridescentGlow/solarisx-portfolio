@@ -2,7 +2,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { Link, useNavigate } from "react-router-dom";
 import AnimatedHeaderSection from "../components/AnimatedHeaderSection";
 import { projects } from "../constants";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { EASE, DURATION } from "../lib/motion";
@@ -13,6 +13,7 @@ const Works = () => {
   const overlayRefs = useRef([]);
   const burstRefs = useRef([]);
   const previewRef = useRef(null);
+  const mobilePreviewRefs = useRef([]);
 
   const [currentIndex, setCurrentIndex] = useState(null);
   const text = `Selected work — what it was,
@@ -22,6 +23,62 @@ const Works = () => {
   const mouse = useRef({ x: 0, y: 0 });
   const moveX = useRef(null);
   const moveY = useRef(null);
+
+  // Mobile preview clips load on intersection, not on page load.
+  //
+  // These <video> elements live in a `md:hidden` wrapper, but `display: none`
+  // does not stop a download — a src'd video fetches regardless of whether it
+  // is painted. So every project's clip was being pulled on BOTH breakpoints
+  // at once: measured at ~8.7MB of the homepage's ~20MB initial payload,
+  // reel.mp4 alone accounting for 7.7MB. The `preload="metadata"` these
+  // carried was inert, because `autoPlay` obliges the browser to fetch the
+  // media it has been told to start playing.
+  //
+  // PROJECT_PAGE_SYSTEM.md §6 requires a poster frame and forbids preloading
+  // several clips in full on load; §8 says mobile should favour posters over
+  // several simultaneous autoplaying videos. So the element renders with its
+  // poster and NO src, and the src is attached only once the row is actually
+  // near the viewport — at which point autoPlay applies to one clip, not three.
+  //
+  // Playback is deliberately not gated here the way ProjectPage.jsx's gallery
+  // observer gates it: that one play/pauses already-loaded clips, which does
+  // not reduce bytes. Withholding src is what reduces bytes. Once attached it
+  // stays attached, so scrolling a row away and back does not re-fetch.
+  useEffect(() => {
+    const videos = mobilePreviewRefs.current.filter(Boolean);
+    if (videos.length === 0) return;
+
+    const attach = (video) => {
+      const { lazySrc } = video.dataset;
+      if (!lazySrc || video.src) return;
+      video.src = lazySrc;
+      video.play().catch(() => {});
+    };
+
+    // No IntersectionObserver (very old browsers, or a test environment that
+    // stubs it away) must not mean a permanently blank preview — fall back to
+    // attaching immediately, which is the pre-existing behaviour.
+    if (typeof IntersectionObserver === "undefined") {
+      videos.forEach(attach);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          attach(entry.target);
+          obs.unobserve(entry.target);
+        });
+      },
+      // Matches the gallery observer's head start in ProjectPage.jsx so the
+      // clip has begun buffering by the time the row is actually read.
+      { rootMargin: "200px" }
+    );
+
+    videos.forEach((video) => observer.observe(video));
+    return () => observer.disconnect();
+  }, []);
 
   useGSAP(() => {
     moveX.current = gsap.quickTo(previewRef.current, "x", {
@@ -334,12 +391,17 @@ const Works = () => {
               />
               {isVideo(project.image) ? (
                 <video
-                  src={project.image}
+                  // src is attached on intersection by the effect above —
+                  // deliberately absent here. poster gives the composed first
+                  // frame §6 requires while no media has been fetched yet.
+                  ref={(el) => (mobilePreviewRefs.current[index] = el)}
+                  data-lazy-src={project.image}
+                  poster={project.poster}
                   autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="none"
                   aria-label={`${project.name} preview`}
                   className="absolute inset-0 object-cover w-full h-full px-14 rounded-xl"
                 />

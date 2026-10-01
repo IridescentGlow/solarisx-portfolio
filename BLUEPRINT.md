@@ -15,6 +15,7 @@ Two honesty notes, stated up front rather than papered over:
 
 1. **I could not render your live site's DOM in this session.** Your app is a client-rendered Next.js SPA; a plain fetch only returns metadata (title, OG tags, theme color), not the rendered frames. I did not have repository access either. So this blueprint's picture of your *current build* is assembled from your own prior-session notes (the five-frame structure, stack, and the self-critique you already produced) rather than from me looking at pixels directly. **Phase 0 below exists specifically to close that gap** — its first job is to re-ground every reference in this document against the actual file tree, before anything else proceeds.
 2. **The reference video's caption is false and should be ignored.** It's captioned "POV: GPT-6 Astra just COOKED," implying an AI model generated the site live. It didn't — the site is a real, professionally built site by **Alche, Inc.**, a Japanese creative studio (their 3D logo/interaction work is independently documented on Awwwards). None of the analysis below treats the clickbait framing as real; it treats the site as what it actually is — a well-executed piece of human art direction worth reverse-engineering.
+3. **Section 2 draws a hard line between reference *principles* (adopt) and reference *executions* (don't rebuild).** Alche's crystal/triangle mark, its chrome-glitch intro, and its grid-floor-plus-HUD works staging are that studio's specific authorship and are explicitly out of scope — Sections 9 and 10 enforce this for the signature motif and project system respectively. If any phase produces something that would read as a recognizable trace of Alche's site to someone who's seen it, stop and flag it rather than ship it.
 
 Everything else in this document is built from what's reliably known: your prior architecture notes, your stated goals, and a frame-by-frame analysis of the reference video.
 
@@ -46,6 +47,8 @@ This is a good sign, not a bad one: the diagnosis is already sound. What's missi
 
 The reference is Alche, Inc.'s site. Frame-by-frame, here's what's actually happening — and why it reads as premium.
 
+**How to read this section:** it's split into two tiers on purpose. *Principles* are transferable craft — techniques and reasoning that belong to the discipline of web/motion design generally, not to Alche. *Signature executions* are Alche's specific, identifiable visual authorship — their mark, their staging, their sequence — and are explicitly off-limits as targets to rebuild on your own site, no matter how close the resemblance would otherwise get you to "looks impressive." The goal is a site that could sit in the same room as this one on craft, built from your own vocabulary.
+
 ### What happens on screen
 1. **Entry:** a chrome/glass blob, heavily motion-blurred and glitch/scan-line distorted, morphs on load — an "instrument calibrating" beat before any content is trusted to the viewer.
 2. **Brand construction:** the glitch resolves into a wireframe triangle built from visible geometric guides (circles, grid lines, construction rays) — the mark is *drawn*, not simply revealed.
@@ -55,15 +58,23 @@ The reference is Alche, Inc.'s site. Frame-by-frame, here's what's actually happ
 6. **Value inversion:** one section abruptly cuts to a stark white/paper environment with a single color-shifting crystal shard and large type set on **opaque dark scrim blocks** laid directly into the 3D depth — not a translucent CSS overlay. Small ruler-tick and coordinate-style micro-labels sit around the composition like production annotation.
 7. **Loop/exit:** transitions resolve back to the minimal line-art triangle with motion blur, closing the loop.
 
-### Why it feels premium (principles, not effects)
-- **Persistent world, not pages.** The whole experience appears to live in one continuous 3D space; "sections" are camera moves through it, so transitions feel diegetic (motivated by an in-scene camera) instead of decorative (a CSS fade bolted onto a page load).
-- **One glyph, many states.** The triangle/crystal recurs at every beat in a different material, color, and complexity. It's a visual *rhyme* — the thing that makes five wildly different-looking scenes still feel like one authored piece.
-- **Palette as narration.** Each project/section gets its own tight, disciplined palette (tech-blue, stark white, acid-green, broadcast-magenta) rather than one brand palette reused everywhere. The site is bold overall because each individual scene is restrained, not despite it.
-- **Type as object.** Headlines sit on opaque cards placed in 3D depth — typography has literal z-position and weight, not just font-size.
-- **Instrumentation over decoration.** HUD chrome (sliders, ruler ticks, joystick) signals "this is a crafted tool," reinforcing a technologist's identity through UI chrome itself, not just written content.
-- **Contrast through restraint.** Nav and utility elements barely move. All dramatic motion budget goes to the signature mark and the media. If everything animated, nothing would read as a moment.
+### Principles — adopt these, build them in your own vocabulary
+- **Persistent world, not pages.** The whole experience appears to live in one continuous space; "sections" are camera moves through it, so transitions feel diegetic (motivated by an in-scene camera) instead of decorative (a CSS fade bolted onto a page load). *This is Gap 1 and the entire point of Phase 3.*
+- **One mark, many states.** A single signature element recurs at every beat in a different material, color, and complexity — a visual rhyme that makes several wildly different-looking scenes still feel like one authored piece. *This is Section 9 — but the mark itself must be yours, see below.*
+- **Palette as narration.** Each project/section gets its own tight, disciplined palette rather than one brand palette reused everywhere. The site is bold overall because each individual scene is restrained, not despite it.
+- **Type as object.** Headlines sit on opaque cards placed in depth — typography has literal z-position and weight, not just font-size.
+- **Instrumentation over decoration.** Interface chrome (sliders, ticks, controls) can signal "this is a crafted tool" and reinforce a technologist's identity through UI chrome itself, not just written content — the *idea* of diegetic instrumentation, not Alche's specific joystick/slider widget.
+- **Contrast through restraint.** Nav and utility elements barely move; all dramatic motion budget goes to the signature mark and the media. If everything animated, nothing would read as a moment.
+- **One continuous easing system driving every handoff** — this is pure technique (a single named CustomEase curve governing all transitions) and is the safest, most directly transferable item on this list.
 
-None of this is about adding more effects — it's one motif, disciplined per-scene color, and legible typographic weight, applied consistently. That's the translation target for your site, not the crystal itself, not the specific triangle, not Japanese-language conventions.
+### Signature executions — Alche's specific authorship, not a target to rebuild
+These four are what someone who's seen Alche's site would immediately recognize if reproduced, even with different colors or assets. Treat them as reference points to understand the *job* each one is doing, then solve that job from scratch:
+- The chrome/glass glitch-blob intro sequence, specifically
+- The faceted crystal triangle as the mark itself — the triangle *shape*, the crystal *material*, and the wireframe-construction *reveal technique* together
+- The grid-floor-plus-HUD-widget staging of the works carousel (the literal floor, the "+" crosshair markers, the joystick/slider cluster)
+- The ruler-tick/coordinate micro-label system used as decorative chrome around text
+
+Your Hero, your intro, and your works-scroll section should do the *same jobs* these do (earn the reveal, carry a recurring mark, stage projects as moments) using assets, geometry, and motifs that come from your own disciplines — compositing, motion graphics, sound design, your existing 3D work — not a reskinned version of Alche's.
 
 ---
 
@@ -170,7 +181,9 @@ If a proposed animation doesn't clearly belong to one of these four tiers, it's 
 
 ## 9. The Signature Motif
 
-Define one recurring visual/geometric element — this can evolve from whatever 3D asset already exists in the Hero, it does not need to be invented from nothing. Requirements:
+Define one recurring visual/geometric element — this can evolve from whatever 3D asset already exists in the Hero, it does not need to be invented from nothing. **It must not be a faceted crystal and must not be a triangle** unless the audit confirms that's already an established mark of yours independent of this blueprint — those two choices specifically belong to Alche's identity (Section 2) and reusing them is the one most visible way this project would read as a trace rather than original direction. Start instead from what's actually yours: your existing Hero geometry, a shape or motif drawn from the video/motion-design side of your practice (a waveform, a scrub/timeline marker, a compositing mask shape, a lens/aperture form), or anything else native to your own disciplines list (Section 1).
+
+Requirements:
 - Must appear in at least three states across the site: full/complex (Hero), reduced/line-form (transitions and loading), and minimal/mark-form (footer or final frame)
 - Must be the *only* element whose material/color is allowed to shift dramatically between sections — this is what earns the per-project palette shifts in Gap 4 the right to feel intentional rather than chaotic
 - Should be reachable/reusable as a favicon-scale mark and a loading-state mark, so it functions as an actual identity system, not a one-off hero prop
@@ -179,9 +192,9 @@ Define one recurring visual/geometric element — this can evolve from whatever 
 
 ## 10. Project (Case Study) System
 
-- Resolve the `/work/[slug]` vs `/projects/:slug` conflict in favor of `/work/[slug]` before building anything else in this system (see Phase 5)
+- Routing: resolve whichever conflict Phase 0 actually finds live in the repo (see Phase 0 findings) — don't assume this blueprint's original recommendation is still correct once real findings exist
 - Each project: hero media (video preferred, poster-image fallback), one restrained palette/lighting treatment distinct from neighboring projects, and a fixed metadata block — date, role/discipline tags (drawn from the discipline list in Section 1), one-line outcome, "next project" affordance
-- Consistency lives in the *metadata block and layout grid*; variation lives in the *palette and media* — this is the same split the reference uses per-project
+- Consistency lives in the *metadata block and layout grid*; variation lives in the *palette and media* — adopt that split as a principle (Section 2), not the reference's literal floor-grid-plus-HUD staging. A project "moment" can be a lighting/color/camera shift within your own layout language; it doesn't need a 3D gallery floor or crosshair markers to read as deliberate
 
 ---
 
@@ -418,3 +431,445 @@ Phase 7 (Contact) has no dependency on the motion/visual chain and can run any t
 ---
 
 *End of blueprint. Next step: open a Claude Code session against the repository, run Phase 0, and fill in Section 17's file map before touching any other phase.*
+
+---
+---
+
+# Phase 0 Findings — Baseline, Audit & Repo Hygiene
+
+**Executed:** 2026-10-01 · against `main` @ `e901762` (working tree clean)
+**Method:** Full file-tree inventory, import-graph trace, exact-path asset reference check, `npm run build`, and a Lighthouse 12.8.2 mobile audit against the real production build.
+**Scope honored:** No component code was written or edited. The only file changed is this one.
+
+> **Read this section before Section 1.** Section 0 of this blueprint was explicit that its
+> picture of the current build came from prior-session notes rather than repo access, and that
+> Phase 0's first job was to close that gap. The gap turned out to be large. **Sections 1, 3, 4,
+> 10 and 17, and Phases 1, 3, 5, 7 and 9, all contain claims that do not match the repository.**
+> Where this section and the body of the blueprint disagree, this section is correct — it was
+> measured, not inferred.
+
+---
+
+## 0.1 Stack correction — the blueprint describes the wrong framework
+
+Section 1 states the stack is "Next.js 15 (App Router) + TypeScript — migrated off an original
+Vite/React starting point." **No such migration happened.** The repo is still Vite + React, and
+there is no TypeScript.
+
+| Section 1 claim | Reality | Evidence |
+|---|---|---|
+| Next.js 15, App Router | **Vite 6** SPA, `react-router-dom` v7 | `package.json`, `vite.config.js`, `src/App.jsx` |
+| TypeScript | **Plain JSX/JS.** `@types/*` are devDeps only; zero `.ts`/`.tsx` files | file tree |
+| React Hook Form + Zod | **Neither is installed.** Validation is hand-rolled | `package.json`; `src/components/ContactForm.jsx:8` |
+| Contact submission "simulated", no provider | **Live via Resend**, in production | `api/contact.mjs:12`; `PROJECT_STATUS.md` |
+
+This matters beyond pedantry: **`/work/[slug]` is Next.js file-route syntax and cannot exist in
+this codebase.** React Router uses `:slug`. Every reference to `[slug]` in Sections 3, 10, 15, 21
+and Phases 5/11 should be read as `:slug`.
+
+**Also:** `node_modules` was absent at Phase 0 start — `npm install` is a prerequisite for any
+later phase. Build verified green after install (`npm run build`, 3.66s, 735 modules).
+
+---
+
+## 0.2 Correction — `--ease-connective` is NOT unused
+
+The blueprint asserts this in six places (Sections 1, 3, 4, 17, Phase 1, Definition of Done).
+**It is false in both layers.**
+
+- **CSS:** `src/index.css:250` defines it, and `src/index.css:379-383` consumes it for the
+  theme crossfade.
+- **JS:** `src/lib/motion.js:15` registers it as a GSAP `CustomEase` named `connective`,
+  exported as `EASE.connective` and used at **three** call sites:
+  `src/components/AnimatedHeaderSection.jsx:66`, `src/pages/ProjectPage.jsx:680`,
+  `src/components/beu/BentoSection.jsx:175`.
+
+Most significantly, `AnimatedHeaderSection.jsx:52-85` is **already an authored two-part
+handoff** — a `connective` tween on the frame container followed by a `cinematic` tween on the
+header content at `"<+0.2"`, with the in-code comment *"The frame arriving is the handoff
+between frames — connective character, quicker and quieter than an entrance."*
+
+**Revised Gap 1.** The gap is not "`--ease-connective` is unused" and not "frame transitions
+don't exist." It is narrower and more precise: **the existing handoff is per-frame and
+self-contained — each frame animates its own entrance on its own ScrollTrigger. No timeline
+spans a frame boundary**, so there is no shared choreography between an outgoing frame's exit
+and the next frame's entrance. Phase 3's actual job is to connect existing per-frame timelines,
+not to build easing from nothing. Phase 1's task "wire `--ease-connective` so it's referenced"
+is **already done and should be struck.**
+
+---
+
+## 0.3 Correction — the routing conflict is not live
+
+**There is no conflict.** The codebase is uniformly `/projects/:slug`. `/work/` appears nowhere
+as a route — every `work-*` match in the tree is a *video filename* (`work-01.mp4` …
+`work-11.mp4`), not a path.
+
+Current canonical surface, all consistent:
+
+- `src/App.jsx:19` — `<Route path="/projects/:slug" …>`
+- `src/lib/seo.js:51` — `PROJECT_PREFIX = "/projects/"`
+- `src/sections/Works.jsx:191,285` — navigation targets
+- `scripts/prerender-meta.mjs` — emits `dist/projects/<slug>/index.html`
+- Live and verified in production for three slugs (`PROJECT_STATUS.md`)
+
+**Revised recommendation — adopt `/projects/:slug`, do not rename.** The blueprint preferred
+`/work/[slug]` on the strength of prior-session "canonical" language, but that pattern was never
+implemented, while `/projects/:slug` is shipped, prerendered, indexed, and has live inbound URLs.
+Renaming would mean touching five files, regenerating prerendered meta, and adding redirects —
+real cost and SEO risk to resolve a conflict that does not exist. Section 3's REMOVE item,
+Phase 5's "Finalize `/work/[slug]`", the Section 20 redirect risk row, and the Section 21
+technical checkbox are all **moot and should be struck.** Phase 11 is unblocked now, not after
+Phase 5.
+
+**Section 10's routing bullet is already reconciled** — the blueprint revision of 2026-10-01
+rewrote it to defer to "whichever conflict Phase 0 actually finds live in the repo" rather than
+presuming `/work/[slug]`. This section supplies that answer: **no conflict exists; the live
+pattern is `/projects/:slug` and it stays.**
+
+---
+
+## 0.4 BLOCKER — the canonical documentation is not in this checkout
+
+`docs/` **is an empty directory.** It is registered as a gitlink (`160000
+22ff2fd3a260c82f7d60d4dc94fd28f1d75eb709`) pointing at a separate private repo
+(*Claude-Manual*), with **no `.gitmodules` entry** — so it is not a registered submodule and
+`git submodule update` fails (`no submodule mapping found in .gitmodules for path 'docs'`). No
+file was ever tracked under `docs/` in this repo's history.
+
+Unavailable as a direct result — every one of these is referenced by name in code comments or
+by this blueprint:
+
+`START_HERE.md` · `HIERARCHY_SYSTEM.md` · `COMPOSITION_PRINCIPLES.md` ·
+`TRANSITION_PHILOSOPHY_CANONICAL.md` · `DESIGN_SYSTEM_TOKENS.md` ·
+`CREATIVE_DIRECTION_BOARD.md` · `CHANGELOG_ARCHIVE.md` · `engineering/DEPLOYMENT_PLAN.md` ·
+`engineering/CONTACT_FORM_ARCHITECTURE.md`
+
+**Consequences, stated plainly:**
+
+1. `CLAUDE.md` mandates reading `docs/START_HERE.md` before any design decision, and declares
+   the documentation canonical and authoritative over implementation. **That instruction cannot
+   currently be satisfied.**
+2. Phase 0 was asked to classify template leftovers "per the existing documentation policy
+   (Canonical / Superseded / Unknown)." **That policy document is unavailable**, so §0.5 applies
+   the three labels by their plain meaning and marks the basis as provisional.
+3. **Phases 1, 2, 6 and 7 all have an unmet prerequisite.** Phase 1 implements "Section 16's
+   token additions" and Phase 6 applies the Hierarchy System — both specified as *the literal
+   spec* from docs that aren't here.
+
+**Required before Phase 1:** clone/restore the docs repo into `docs/`, and either add a proper
+`.gitmodules` entry or record the arrangement explicitly. This is the single highest-priority
+Phase 0 output.
+
+> **RESOLVED 2026-10-01.** `docs/` has been cloned from `IridescentGlow/Claude-Manual` and its
+> HEAD is exactly the pinned gitlink commit `22ff2fd`, so the working tree now matches what the
+> parent repo records. All 15 canonical documents are present and Phases 1, 2 and 6 are
+> unblocked. Two notes: the missing `.gitmodules` entry is **still** missing — the arrangement
+> is unchanged, only the checkout is restored — and `START_HERE.md` §1 lists canonical doc 13 as
+> `PROJECT_PAGE_SYSTEM.md`, "the `/projects/:slug` depth layer", which independently confirms
+> §0.3's routing answer from the canonical side.
+
+---
+
+## 0.5 Template leftover audit (Ali-Sanati `awwwards-portfolio`)
+
+Classified by actual reachability from `src/main.jsx`, verified by import-graph trace and
+exact-path (not substring) reference search. **Basis is provisional** per §0.4.
+
+### Superseded — dead, safe to remove
+
+| Surface | Evidence |
+|---|---|
+| `src/components/Planet.jsx` | **Imported by nothing.** Superseded by `src/components/GeminiStar.jsx` |
+| `public/models/Planet.glb` | Referenced only by the dead `Planet.jsx` |
+| `public/images/man.jpg` | Zero references |
+| `public/assets/backgrounds/blanket.jpg`, `table.jpg` | Zero references (`curtains/map/poster.jpg` **are** used by `src/constants/index.js`) |
+| `public/assets/projects/{apple-tech-store,electronics-store,game-store,home-decor-store,mobile-accessories-store,plant-shop}.jpg` | Template demo projects. Zero references. `src/constants/index.js:193` explicitly calls `game-store.jpg` "the template's leftover" |
+| `public/assets/projects/Star-Iridescent.svg` | Zero references |
+
+Removing these deletes no reachable behavior. **Deferred to a Phase 0 hygiene commit — not done
+here, since this task was audit-only.**
+
+### Canonical — template-derived but deliberately retained and substantially rewritten
+
+`src/components/AnimatedHeaderSection.jsx` (now carries the `layout` composition system),
+`AnimatedTextLines.jsx`, `Marquee.jsx`, `src/lib/motion.js`, and the five `src/sections/` frames.
+These began as template files but are load-bearing and heavily modified.
+
+### Unknown — flagged, not guessed
+
+| Surface | Why unclear |
+|---|---|
+| `public/images/photo.jpg` | **Still the template's stock photo**, live in `src/sections/About.jsx`. Already flagged in `PROJECT_STATUS.md` as blocked on a real portrait. Reachable, so not dead — but not intended final content either. Needs an asset decision, not a code decision |
+| `src/components/reel/StarField2D.jsx` | Reachable via `ReelIntro`, but overlaps the Section 9 signature-motif remit. Keep/fold-in is a Phase 2 design call |
+| `.theme-init` class in the `src/index.css:378` crossfade selector | Already self-flagged as dead in `PROJECT_STATUS.md`. Trivial, but touches the theme cascade — not a blind delete |
+
+---
+
+## 0.6 Lighthouse baseline (mobile) — Performance is UNSCOREABLE
+
+Lighthouse 12.8.2, `--form-factor=mobile`, simulated throttling, against `npm run preview` of
+the real production build (`http://localhost:4173/`).
+
+| Category | Score |
+|---|---|
+| Performance | **`null` — could not be computed** |
+| Accessibility | **96** |
+| Best Practices | **100** |
+| SEO | **92** |
+
+> **Environment note:** no Chromium-family browser was installed on this machine. Chrome for
+> Testing 154.0.8037.57 was downloaded to `~/.cache/puppeteer/` to run this audit. The bundled
+> Chrome DevTools MCP could not be used — it resolves Chrome only at `/opt/google/chrome/chrome`
+> — so later browser-QA phases should either use the Lighthouse CLI with `CHROME_PATH` as done
+> here, or install Chrome at that system path.
+
+### Why Performance returned null
+
+`largest-contentful-paint`, `total-blocking-time` and `interactive` all failed with
+**`NO_LCP`** — the page never produced a Largest Contentful Paint at all, so the category has no
+basis to score. What *was* measured:
+
+| Metric | Value |
+|---|---|
+| First Contentful Paint | **4.1 s** (score 0.22) |
+| Speed Index | 4.1 s (score 0.80) |
+| Cumulative Layout Shift | **0** (score 1.00) — genuinely good |
+| **Total page weight** | **20,425 KiB (≈20 MB)** |
+| Main-thread work | **179.6 s** |
+| Script bootup time | **94.1 s** |
+
+### Root cause: ~17.6 MB of video on initial homepage load
+
+27 requests. Media alone is 17,638 KiB — **86% of total weight** — all eager:
+
+| Asset | Transfer |
+|---|---|
+| `/assets/projects/reel.mp4` | **7,704 KiB** |
+| `/videos/optimized/work-05.mp4` | 2,564 KiB |
+| `/videos/optimized/work-11.mp4` | 2,369 KiB |
+| `work-03 / work-10 / work-06 / work-01.mp4` | 1,143 / 1,045 / 987 / 814 KiB |
+| `editor-portfolio/work-01.mp4`, `medi-help.mp4` | 576 / 435 KiB |
+| `backgrounds/curtains · poster · map .jpg` | 604 / 584 / 565 KiB (1,847 KiB images total) |
+| `/assets/index-*.js` | 438 KiB (single chunk — build warns >500 KiB pre-gzip) |
+| `/models/3d-star.glb` | 346 KiB |
+
+The six `work-*.mp4` files are `GeminiStar.jsx` video textures (`src/constants/geminiVideos.js`).
+Combined with a homepage render gate that withholds all content until
+`useProgress() === 100` (`src/pages/HomePage.jsx:21-25`), the page cannot settle — which is
+very likely *why* no LCP is ever recorded.
+
+### This materially changes Phase 9
+
+Phase 9 is written as "re-baseline against Phase 0's numbers" with a 95+ target. **There is no
+Phase 0 performance number to re-baseline against, and the distance is not a polish gap.**
+Section 13's remedies (lazy-load, poster-first video, defer per-project media) are correct in
+kind but are scoped in the blueprint as a late tuning pass. On a 20 MB / 180 s-main-thread
+baseline they are **structural work that should move much earlier** — Section 13's own
+"poster-frame-first, load full video on intersection, not on page load" is precisely the
+unfixed bug here. Recommend promoting the media-loading strategy to a Phase 1.5, ahead of
+Phase 3's choreography work, since transition timing tuned on an unsettled page will have to be
+re-tuned afterward.
+
+### Accessibility 96 / SEO 92 — specific failures
+
+- **`color-contrast` (24 nodes)** — e.g. `div.flex > div > h3.flex > span.mr-12`. Relevant to
+  Section 14's per-palette focus/contrast requirement, which is thus failing *before* any
+  per-project palettes are introduced.
+- **`crawlable-anchors` (5 nodes)** — `react-scroll`'s `<Link>` (`src/sections/Navbar.jsx:110`)
+  renders an `<a>` with **no `href`**, so the five in-page nav links aren't crawlable. A
+  concrete, small Phase 11 item.
+
+---
+
+## 0.7 Section 17 — filled in with real paths
+
+Replaces the placeholder table in Section 17. **"Kind of change" is corrected where Phase 0
+found the work already done.**
+
+| Area | Real paths | Kind of change (corrected) |
+|---|---|---|
+| Frame transition orchestration | `src/components/AnimatedHeaderSection.jsx:52-85` · `src/lib/motion.js` (`EASE`, `DURATION`, `SCROLL_REVEAL_START`) · `src/lib/useLenisScrollSync.js` · `src/pages/HomePage.jsx` | **Extend, not New.** Per-frame `connective`→`cinematic` handoff already exists; what's missing is a timeline spanning frame *boundaries* (§0.2) |
+| Heading components per frame | `src/components/AnimatedHeaderSection.jsx` (`layout` prop: `split`/`centered`/`offset`) · `src/components/AnimatedTextLines.jsx` · callers `src/sections/{Hero,Works,About,Services,Contact}.jsx` | **Partly done.** Per-frame *composition* shipped (`About`→`offset:52`, `Services`→`centered:40`, `Contact`→`centered:48`, `Works`→`split` default). Per-frame *type scale* still pending — and blocked on `HIERARCHY_SYSTEM.md` (§0.4) |
+| Signature motif component | `src/components/GeminiStar.jsx` + `public/models/3d-star.glb` · `src/constants/geminiVideos.js` · `src/lib/starVideoRegions.js` · `src/components/reel/StarField2D.jsx` · *(dead: `src/components/Planet.jsx`, `public/models/Planet.glb`)* | Refactor/extend. Note the motif's video textures are the single largest perf cost (§0.6). **Section 9's no-crystal/no-triangle constraint is already satisfied** — see §0.9 |
+| Project/case-study routing | `src/App.jsx:19` · `src/lib/seo.js:51` · `src/sections/Works.jsx:191,285` · `scripts/prerender-meta.mjs` · `vercel.json` | **No change.** Already uniformly `/projects/:slug` (§0.3) |
+| Project/case-study page template | `src/pages/ProjectPage.jsx` · `src/components/reel/{ReelIntro,MainReel,VideoConstellation,StarField2D}.jsx` · `src/components/beu/{BentoSection,BentoObject,beuBentoConfig}.jsx` · data in `src/constants/index.js` | Refactor. Three case studies complete, not mid-build |
+| Contact form submission | `src/components/ContactForm.jsx` · `api/contact.mjs` (Resend, Vercel function) | **No change — already live.** Phase 7 is complete; strike it |
+| Design tokens file | `src/index.css` (tokens ~L120-268; light-theme overrides L288-326) · JS mirror in `src/lib/motion.js` | Extend. **Any token change must be made in both files** — `motion.js` duplicates the curves as GSAP `CustomEase`s |
+
+### Architecture facts for later phases
+
+- **Frame order as built** (`src/pages/HomePage.jsx:57-64`): `Navbar → Hero → Works → About →
+  ServiceSummary → Services → ContactSummary → Contact`. The five canonical frames are present
+  in Section 6's order, interleaved with two marquee interstitials
+  (`ServiceSummary`/`ContactSummary`) the blueprint never mentions — **these sit exactly at the
+  frame seams Phase 3 must choreograph**, so they are part of Gap 1's surface, not decoration.
+- **Known pre-existing bug, relevant to Phase 10:** `motion.js`'s reduced-motion collapse via
+  `gsap.defaults({duration: 0})` is **inert** wherever a call site passes `duration:`
+  explicitly — which is every call site. Measured in a prior session, recorded in
+  `PROJECT_STATUS.md`. Phase 10 must fix `motion.js`, not just add fallbacks.
+- **`PROJECT_STATUS.md` "Current milestone" is stale** — it describes Tier 1.1 (the
+  `layout` prop) as the in-flight milestone, but it is built and shipped. Worth correcting when
+  status is next updated.
+
+---
+
+## 0.8 Phase 0 acceptance criteria
+
+| Criterion | Status |
+|---|---|
+| Filled-in Section 17 table with real paths | **Done** — §0.7 |
+| Baseline performance/accessibility report | **Partial** — a11y 96 / BP 100 / SEO 92 captured; **Performance unscoreable (`NO_LCP`)**, §0.6. This is itself the finding, not a measurement failure |
+| Explicit decision on `/work/[slug]` vs `/projects/:slug` | **Done** — adopt `/projects/:slug`; no conflict existed, §0.3 |
+| Visual audit / screenshot each frame | **Not done** — deferred with the DevTools MCP browser limitation in §0.6 |
+| No code changed | **Honored** — `BLUEPRINT.md` is the only modified file |
+
+### Blockers to clear before Phase 1
+
+1. **Restore `docs/`** (§0.4) — canonical specs for Phases 1, 2 and 6 are missing, and
+   `CLAUDE.md`'s core instruction is unsatisfiable without them. Highest priority.
+2. **Decide on promoting media-loading work ahead of Phase 3** (§0.6) — 20 MB initial load.
+3. **Optional hygiene commit** removing the §0.5 Superseded files.
+
+---
+
+## 0.9 Addendum — against the 2026-10-01 blueprint revision (originality guardrail)
+
+The blueprint was revised after Phase 0's audit ran, adding honesty note 3, the Section 2
+principles/executions split, Section 9's no-crystal/no-triangle constraint, and Section 10's
+deferral to Phase 0 on routing. Re-checking Phase 0's findings against those four changes:
+
+**1. Section 9's constraint is already satisfied — no redirection needed.** The existing motif is
+**a star, not a crystal or a triangle.** Verified by parsing the glTF directly: `3d-star.glb` is a
+single mesh (`mesh_node`, 9,818 verts / 19,632 tris, positions+indices only — no normals, no UVs,
+no embedded material). `GeminiStar.jsx` splits that one mesh into regions and maps **the site
+owner's own reel footage onto them as live `THREE.VideoTexture`s**
+(`src/constants/geminiVideos.js`, `src/lib/starVideoRegions.js`).
+
+That is a stronger position than Section 9's fallback suggestions. Section 9 proposes starting
+from "a waveform, a scrub/timeline marker, a compositing mask shape, a lens/aperture form" —
+motifs drawn from the video/motion side of the practice. The built motif **already is** that: a
+form whose surface is literally the owner's own edited video. The "one mark, many states"
+principle can be developed from an asset that is native by construction, with no Alche
+resemblance to design around.
+
+**2. Phase 2's framing needs one adjustment.** Phase 2 says "extend the existing Hero 3D asset
+into a shared component with full/reduced/minimal states." §0.6 found the motif's six video
+textures are the single largest performance cost on the site (~9.9 MB of the 17.6 MB media
+load). So the *reduced* and *minimal* states required by Section 9 are not only an identity
+exercise — **they are also the performance fix**: a line-form or mark-form state that carries no
+video is what makes the motif reusable in transitions, loading states and the footer without
+re-paying that cost. Phase 2 and the §0.6 media work are the same piece of work approached from
+two directions, which strengthens the case in §0.6 for pulling media strategy earlier.
+
+**3. Section 2's "one continuous easing system driving every handoff"** is called out in the
+revision as "the safest, most directly transferable item on this list." Per §0.2 it is **already
+built** — four named GSAP `CustomEase` curves in `src/lib/motion.js` mirroring the CSS tokens,
+with `connective` reserved for handoffs. The transferable technique is in place; only the
+cross-frame-boundary timeline is missing.
+
+**4. Section 10's routing deferral** is answered in §0.3: no conflict exists, `/projects/:slug`
+is live and stays.
+
+**No Phase 0 finding is invalidated by the revision.** The stack correction (§0.1), the
+`--ease-connective` correction (§0.2), the routing answer (§0.3), the missing-`docs/` blocker
+(§0.4), the template audit (§0.5) and the Lighthouse baseline (§0.6) all stand unchanged, and
+**§0.4 remains the blocker on Phase 1.**
+
+---
+
+---
+
+## 0.10 Media load fix — implemented and verified (2026-10-01)
+
+Carried out after the docs were restored, so it is governed by canonical rules rather than
+inference. `PROJECT_PAGE_SYSTEM.md` §6 requires a poster frame and mandates
+`preload="metadata"` — **never `auto`** — because "a project page may hold several clips; they
+must not all fetch in full on load"; §8 adds that mobile "should favour posters that play on
+interaction over several simultaneous autoplaying videos". `TECH_STACK.md`'s VIDEO HANDLING
+section forbids "huge uncompressed files" and requires assets be "optimized before use".
+
+### Three causes, three fixes
+
+**1. `src/sections/Works.jsx` — clips fetched behind `display: none` (~8.7 MB).**
+Each project rendered a `<video autoPlay>` inside a `md:hidden` wrapper. CSS `display: none`
+does not prevent a download, so all three preview clips fetched on *both* breakpoints —
+`reel.mp4` alone was 7.7 MB. The `preload="metadata"` already there was inert, because
+`autoPlay` obliges the browser to fetch media it has been told to play. Now the element renders
+with its `poster` and **no `src`**, and an `IntersectionObserver` (`rootMargin: "200px"`, matching
+the existing gallery observer in `ProjectPage.jsx`) attaches `src` only when the row nears the
+viewport, then unobserves. Falls back to immediate attach where `IntersectionObserver` is
+undefined. Note the pre-existing gallery observer gates *playback*, which saves no bytes;
+withholding `src` is what saves bytes.
+
+**2. `src/components/GeminiStar.jsx` — `preload="auto"` on six clips (§6 violation).**
+Corrected to `preload="metadata"`, with `src` attached at wire-up rather than at element
+creation.
+
+**3. The texture clips were ~8× over-spec — the actual root cause.**
+All six were **1280×720** (0.83–2.6 Mbps, ~8 s), while they are only ever sampled as textures on
+star faces a few hundred pixels wide. Re-encoded to **640×360** (H.264, CRF 26, audio stripped —
+they are silent textures): **8,920 KiB → 2,235 KiB, −75%**, with frame counts and aspect ratios
+preserved. `work-11` keeps its 640×268 letterbox. Originals are recoverable from git.
+
+Both other consumers were checked first: `reelConstellationConfig.js` renders the same six clips
+as small floating panels, and `MainReel` uses `reel.mp4`, not these — so no consumer displays
+them large enough to notice.
+
+### An intermediate fix was reverted on evidence
+
+Between 2 and 3, the six clips were loaded *sequentially* to stop them racing for bandwidth
+before first paint. Once they were re-encoded that contention no longer existed, and
+measurement showed sequencing **cost ~1.8 s of Speed Index** by holding the last clips back. It
+was removed rather than kept "just in case" — the asset fix removed the need for the code
+workaround.
+
+### Verified result (Lighthouse 12.8.2, mobile, simulated throttling)
+
+| Metric | Baseline | After | Change |
+|---|---|---|---|
+| **Total transfer** | 20,425 KiB | **5,111 KiB** | **−75%** |
+| of which Media | 17,638 KiB | **2,237 KiB** | **−87%** |
+| Main-thread work | 179.6 s | **20.5 s** | **−89%** |
+| Script bootup | 94.1 s | **4.8 s** | **−95%** |
+| First Contentful Paint | 4.1 s | 4.1 s | unchanged |
+| Speed Index | 4.1 s | 4.1 s | unchanged (regression reverted) |
+| CLS | 0 | 0 | unchanged |
+| Accessibility / Best Practices / SEO | 96 / 100 / 92 | **96 / 100 / 92** | no regression |
+
+`npm run lint` clean and `npm run build` green after every step.
+
+### `NO_LCP` is a separate bug, and it is now narrowed
+
+Performance still scores `null`: bytes were not the cause. Trace inspection
+(`--save-assets`) shows **zero `largestContentfulPaint::Candidate` events** and four
+`NavStartToLargestContentfulPaint::Invalidate::AllFrames::UKM` events — no element ever
+qualified as an LCP candidate.
+
+The cause is **specific to the homepage**, established by controlled comparison rather than
+inference: `/projects/medihelp`, which renders the *same* `AnimatedHeaderSection` with the same
+`gsap.from(..., {opacity: 0})` entrance, **reports LCP normally at 5.8 s and scores performance
+68.** That rules out the shared header and its opacity animation. What is left is homepage-only:
+`HomePage.jsx:21-25`'s `useProgress()` gate, which holds every frame inside an `opacity-0`
+wrapper until `progress === 100` and then swaps out the loading overlay — removing the only
+paint candidate and invalidating LCP — plus the R3F canvas itself.
+
+Fixing that means changing how the homepage's loading experience is composed, which is Phase 4
+(Hero) and Phase 9 (Performance) territory, not a media-loading change. **Flagged, not
+attempted.** Until it is fixed, the Section 21 "mobile Lighthouse performance ≥ 95" criterion
+cannot be measured on `/` at all — though `/projects/:slug` now gives a real number (68) to
+work against.
+
+### Remaining media opportunities (not done)
+
+- `public/videos/optimized/work-02/04/07/08/09.mp4` (~3 MB tracked) are **referenced nowhere** —
+  the portrait clips left over from the removed side panels. A §0.5-style Superseded candidate,
+  left in place pending a decision.
+- `/assets/backgrounds/{curtains,poster,map}.jpg` are 565–604 KiB each (1,847 KiB total) and
+  still load eagerly as `bgImage`. Next-largest win after this pass.
+- The single JS chunk is 1,513 KiB (447 KiB gzipped) and still warns at build; route-based
+  code-splitting is deferred per `FUTURE_IMPLEMENTATIONS.md`.
+
+---
+
+*End of Phase 0 findings.*

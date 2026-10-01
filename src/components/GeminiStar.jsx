@@ -292,14 +292,16 @@ function useStarVideoTextures(slots, regionAspects) {
   );
 
   useEffect(() => {
-    const videos = slots.map((slot) => {
+    const videos = slots.map(() => {
       const video = document.createElement("video");
-      video.src = slot.src;
       video.muted = true;
       video.loop = true;
       video.playsInline = true;
       video.autoplay = true;
-      video.preload = "auto";
+      // `metadata`, never `auto` — PROJECT_PAGE_SYSTEM.md §6. src is attached
+      // below rather than here, so nothing is fetched until the element is
+      // wired up to play.
+      video.preload = "metadata";
       return video;
     });
     const textures = videos.map((video) => {
@@ -312,7 +314,20 @@ function useStarVideoTextures(slots, regionAspects) {
     });
 
     let cancelled = false;
-    const onReadyHandlers = videos.map((video, i) => {
+
+    // src is assigned here rather than at creation so it pairs with the
+    // preload="metadata" above: nothing is fetched until the element is
+    // actually wired up to play.
+    //
+    // These load in parallel, deliberately. An earlier pass sequenced them
+    // to stop six clips racing for bandwidth before first paint, but that
+    // was a workaround for the clips being 1280x720 (~8.9MB together) when
+    // they are only ever sampled as textures on star faces a few hundred
+    // pixels wide. Re-encoding them to 640x360 cut that to ~2.2MB, which
+    // removed the contention the sequencing existed to manage — and
+    // sequencing then cost Speed Index ~1.8s by holding the last clips
+    // back, so it is gone rather than kept "just in case".
+    const handlers = videos.map((video, i) => {
       const onReady = () => {
         if (cancelled) return;
         applyCoverFit(
@@ -327,6 +342,7 @@ function useStarVideoTextures(slots, regionAspects) {
         });
       };
       video.addEventListener("loadeddata", onReady);
+      video.src = slots[i].src;
       // Autoplay can be blocked under unusual browser policy configs even
       // when muted; the plain-glass fallback above covers that case too,
       // so a rejected play() is not surfaced as an error.
@@ -337,7 +353,7 @@ function useStarVideoTextures(slots, regionAspects) {
     return () => {
       cancelled = true;
       videos.forEach((video, i) => {
-        video.removeEventListener("loadeddata", onReadyHandlers[i]);
+        video.removeEventListener("loadeddata", handlers[i]);
         video.pause();
         video.removeAttribute("src");
         video.load();

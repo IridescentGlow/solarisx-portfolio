@@ -4,6 +4,12 @@ Portable status snapshot. Full milestone history: docs/CHANGELOG_ARCHIVE.md (rea
 Design/engineering rules: docs/START_HERE.md.
 
 ## Last updated
+**Media load fixed; redesign Phase 0 complete (2026-10-01.)** Homepage initial transfer cut
+20,425 -> 5,111 KiB (media 17,638 -> 2,237 KiB) by lazy-loading Works preview clips on
+intersection and re-encoding the six star texture clips 1280x720 -> 640x360. Full detail:
+`BLUEPRINT.md` §0.10. `docs/` was missing from this checkout and has been restored at the
+pinned gitlink commit `22ff2fd`.
+
 **Premium phase begins (2026-08-15.)** The functional/responsive foundation is complete and
 pushed: contact form (`6fa7f55`, `19d78d4`), robots.txt + sitemap.xml (`8eafb14`), mobile
 responsiveness and media sizing (`11440f3`). The prior "next milestone: robots.txt + sitemap"
@@ -56,21 +62,33 @@ Stages 1-4 complete: GLB/material/lighting/motion, video textures, hover, proxim
 grab/drag/momentum. No further stages planned.
 
 ## Current milestone
-**Tier 1.1 — Frame composition system.** `DESIGN_DIRECTION.md` §3. Adds an additive `layout`
-prop to `AnimatedHeaderSection` (`split` default / `centered` / `offset`) and applies the
-per-frame rhythm `COMPOSITION_PRINCIPLES.md` §2 specifies: Works keeps `split` (the one frame
-the current layout is already correct for), About → `offset`, Capabilities → `centered`,
-Contact → `centered`.
+**Next: BLUEPRINT.md Phase 1 — design tokens (typography + motion).** Unblocked as of
+2026-10-01, when `docs/` was restored and the canonical token/hierarchy specs became readable.
+Per-frame type-scale tokens per `DESIGN_SYSTEM_TOKENS.md` and `HIERARCHY_SYSTEM.md`. Note any
+token change must be made in BOTH `src/index.css` and `src/lib/motion.js`, which mirrors the
+curves as GSAP `CustomEase`s.
 
-Picked first because it is the **precondition** for all transition work — a Tier 1/Tier 3
-handoff is not legible between two frames that look identical. Hero is deliberately excluded
-(Tier 1.2): its composition cannot be decided separately from the star↔headline relationship
-`COMPOSITION_PRINCIPLES.md` §5 deferred, and that deferral's condition (a real asset) is now met.
-
-Constraints: `split` must stay byte-identical for every existing caller, including all nine
-`ProjectPage.jsx` chapter openers. No new easing curve, no new duration token, no new library.
+**Tier 1.1 — Frame composition system: BUILT AND SHIPPED.** The additive `layout` prop on
+`AnimatedHeaderSection` (`split` default / `centered` / `offset`) exists, and the per-frame
+rhythm `COMPOSITION_PRINCIPLES.md` §2 specifies is applied: Works keeps `split`, About →
+`offset` (`About.jsx:52`), Capabilities → `centered` (`Services.jsx:40`), Contact → `centered`
+(`Contact.jsx:48`). This section previously described it as in-flight; that was stale.
+Hero remains deliberately excluded (Tier 1.2).
 
 ## Known open items
+- **Homepage mobile Lighthouse performance is unscoreable — `NO_LCP`** (found 2026-10-01). The
+  page produces zero LCP candidates, so the category returns `null`; this is NOT a byte problem
+  and survived the media fix. Isolated to homepage-only code by controlled comparison:
+  `/projects/medihelp` renders the same `AnimatedHeaderSection` and scores 68 with LCP at 5.8s.
+  Suspect `HomePage.jsx:21-25`'s `useProgress()` gate (holds all frames in an `opacity-0`
+  wrapper, then removes the loading overlay, destroying the only paint candidate) plus the R3F
+  canvas. See `BLUEPRINT.md` §0.10. Blocks the "mobile Lighthouse >= 95" criterion on `/`.
+- `public/videos/optimized/work-02/04/07/08/09.mp4` (~3 MB, tracked) are referenced nowhere —
+  portrait leftovers from the removed star side panels. Removal candidate, decision pending.
+- `/assets/backgrounds/{curtains,poster,map}.jpg` are 565–604 KiB each and still load eagerly as
+  `bgImage` — the next-largest media win after the 2026-10-01 pass.
+- `docs/` still has **no `.gitmodules` entry** — restoring the checkout did not change that, so
+  it remains a gitlink-without-submodule needing a separate push plus a parent gitlink bump.
 - Contact form: complete and verified in production. No longer open — see "Last updated" above.
 - SEO/share metadata: per-route <title>/description/OG/Twitter shipped and live in production
   — see Deployment section above. No longer open.
