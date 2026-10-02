@@ -224,7 +224,7 @@ Retain React Three Fiber, but scope it deliberately:
 - Preload the signature motif's assets specifically (it's the highest-reuse asset in the system) and defer per-project media until its frame nears the viewport
 - Video: poster-frame-first, load full video on intersection, not on page load
 - Fonts: preload Amiamie's critical weights only; system-font fallback stack defined so there's no invisible-text flash
-- Budget check before Phase 10: Lighthouse performance score on mobile, not just desktop — your own prior notes already target Lighthouse 95+
+- ~~Budget check before Phase 10: Lighthouse performance score on mobile, not just desktop — your own prior notes already target Lighthouse 95+~~ — **superseded for `/` only, see §0.14.** A lab Performance score is not a meaningful target for a page with an intentionally persistent animated hero (Section 9/11); `/` is budgeted against field metrics (LCP/CLS/INP) instead. The 95+ lab target still applies unchanged to static/content pages (`/projects/:slug`).
 
 ---
 
@@ -303,6 +303,7 @@ Because this session couldn't inspect the live repo, this section defines the *k
 - Objective: Apply Section 7's Hero typography spec; confirm the signature motif's full state is the centerpiece
 - Prerequisites: Phases 1–3
 - Acceptance criteria: Hero passes a "first five seconds" review — does it say the least and take up the most space, per Section 7
+- **Deferred decision point, see §0.14:** whether the Hero's R3F render loop should eventually settle to a rest state (render-on-demand after the entrance/idle motion has been visible for some period) rather than running `frameloop="always"` indefinitely. Not resolved in Phase 0 — §0.13/§0.14 only implemented and measured a visibility-based pause (off-screen stops the loop entirely; on-screen behavior is untouched). Revisit here, with the full Hero motion spec in view, not as a Phase 0/perf-branch decision.
 
 **Phase 5 — Project / Case Study System**
 - Objective: Close Gap 4; resolve the routing conflict permanently
@@ -328,12 +329,13 @@ Because this session couldn't inspect the live repo, this section defines the *k
 **Phase 9 — Performance Pass**
 - Objective: Implement Section 13; re-baseline Lighthouse against Phase 0's numbers
 - Prerequisites: All content/motion phases complete
-- Acceptance criteria: Mobile Lighthouse performance score meets the 95+ target from your existing standard
+- Acceptance criteria: ~~Mobile Lighthouse performance score meets the 95+ target from your existing standard~~ — **superseded for `/` only, see §0.14.** `/` is re-baselined against field metrics (LCP/CLS/INP, real-user thresholds); the 95+ lab score target applies to `/projects/:slug` and any future static/content pages.
 
 **Phase 10 — Accessibility & Reduced Motion**
 - Objective: Implement Section 14
 - Prerequisites: Phase 3 (transition system must exist to build its reduced-motion fallback) and Phase 5 (per-project palettes must exist to check focus-state contrast against each)
 - Acceptance criteria: Full keyboard walkthrough passes; reduced-motion mode preserves all content
+- **Explicit scope addition, see §0.14:** validate the `#CFA355` accent color for contrast against the dark theme background wherever it's used for text, not only as a decorative/border accent. Flagged as open in §0.11 and again in §0.13; `/` currently has 24 `color-contrast` Lighthouse failures that may share this root cause. This item belongs to this phase, not a future unscheduled pass.
 
 **Phase 11 — SEO Verification**
 - Objective: Implement Section 15
@@ -415,7 +417,7 @@ Phase 7 (Contact) has no dependency on the motion/visual chain and can run any t
 - [ ] No monolithic components — signature motif, transition engine, and project system are each independently reusable
 
 **Performance**
-- [ ] Mobile Lighthouse performance ≥ 95
+- [ ] ~~Mobile Lighthouse performance ≥ 95~~ — **superseded for `/`, see §0.14.** Applies to `/projects/:slug` and future static/content pages unchanged. `/`'s acceptance criteria is field LCP/CLS/INP at real-user thresholds (§0.14) — TBT/TTI/overall Performance are not meaningful scores for a page with an intentionally persistent animated hero (Section 9/11).
 - [ ] Heavy dependencies (GSAP plugins, R3F canvas) are code-split per frame
 
 **Responsive**
@@ -1182,6 +1184,144 @@ it.** It needs an explicit decision, not an optimisation pass.
 
 Fixing LCP (9.0 s) is a separate, non-architectural thread and the most valuable next
 performance work regardless of which option is chosen.
+
+---
+
+## 0.14 Conflict resolved, off-screen pause implemented, LCP fixed — with one caught regression (2026-10-02)
+
+Three pieces of follow-up work on the §0.13 findings, done in order: resolve the Section 21 vs
+9/11 conflict in writing (docs only), implement Option 2's off-screen pause for real, and fix the
+9.0 s LCP. All three are done; the pause took two attempts, and the LCP fix introduced a CLS
+regression that was caught before being reported as done, not after.
+
+### 1. The conflict — resolved on the user's decision, not re-litigated
+
+Section 21's "mobile Lighthouse performance ≥ 95" now applies to static/content pages
+(`/projects/:slug` and future ones) only. For `/`, the lab Performance/TBT/TTI score is struck as
+a target and replaced with field metrics — LCP, CLS, INP, judged against real-user thresholds
+(good: LCP ≤ 2.5 s, CLS ≤ 0.1, INP ≤ 200 ms), because a page with an intentionally persistent
+animated hero structurally cannot pass a lab TTI/TBT check regardless of implementation quality
+(§0.13). Applied as inline supersede-markers at Section 13, Section 18 Phase 9, and Section 21 —
+see those sections directly rather than this summary. Render-on-demand-after-settle (§0.13's
+option 3) is recorded as a **deferred decision point for Phase 4**, not rejected — see the note
+added to Phase 4 in Section 18. The accent-contrast question is now explicit, written scope inside
+Phase 10 in Section 18 (not just a flag in this findings log) — this is its third mention
+(§0.11, §0.13, here) and it was overdue to actually land somewhere actionable.
+
+### 2. Off-screen pause — the first implementation didn't work, and shipping it unverified would have been wrong
+
+Section 11 requires any R3F canvas be "unmounted/paused when its frame isn't in view." The first
+attempt: a child component inside `<Canvas>` calling the store's imperative `state.setFrameloop()`
+from an `IntersectionObserver` on `gl.domElement`. This is documented R3F API and reads correctly
+from the library's own source (`setFrameloop('never')` makes the shared render loop skip that root
+entirely — traced directly in `node_modules/@react-three/fiber`). It also **did not work**, and
+the systematic-debugging skill's "verify before claiming success" step is what caught it rather
+than the user:
+
+- A WebGL-draw-call counter (CDP-injected into a real headless Chrome session, not inferred) showed
+  draws continuing, *and increasing*, after the observer fired and logged `never`.
+- Polling the live store state directly (`state.get().frameloop`, via a store reference exposed
+  through `onCreated`) showed `frameloop` reading back `"always"` continuously — the external
+  `"never"` call never stuck for even one 500 ms poll tick.
+- Root cause, found in `<Canvas>`'s own source: its internal `useIsomorphicLayoutEffect` has no
+  dependency array and re-runs `configure({ ..., frameloop })` — reasserting the **declared prop**
+  (default `"always"`) — on every re-render of `CanvasImpl`. `react-use-measure`'s `{scroll:true}`
+  option plus its `ResizeObserver` make that happen often enough (well under 500 ms) that an
+  external, imperative override can never win.
+
+Fix: make `frameloop` a **declared, state-driven prop** on `<Canvas>` instead
+(`<Canvas frameloop={frameloop}>`, `frameloop` from `useState`, flipped by the same
+`IntersectionObserver`, now watching a stable `<figure>` ref instead of the canvas element). This
+way Canvas's own re-render-driven resync reasserts the *correct* value instead of fighting it.
+Still only `"always"`/`"never"` — `"demand"` was never introduced, so the entrance/idle animation
+logic in `GeminiStar` is untouched, matching the instruction to keep this scoped.
+
+**Verified, not assumed**, via the same CDP draw-call counter against the real built app:
+
+| State | WebGL draw calls / 1.5 s |
+|---|---|
+| Hero on screen | 63 |
+| Scrolled fully off-screen (past the 200px margin), settled | **0** |
+| Scrolled back on screen | 63 (resumes — not stuck off) |
+
+No change on `/` itself: the Hero is on screen for the entire page load and the entire Lighthouse
+run (which never scrolls), so this doesn't move any lab or field number here. It matters for a
+restored scroll position, a deep link landing below the Hero, or simply not burning battery/GPU
+once a visitor has scrolled past it — exactly Section 11's stated reason, nothing more claimed.
+
+### 3. The 9.0 s LCP — root cause named, fixed, re-measured
+
+Profiled instead of guessed, per instruction. The trace's one real `largestContentfulPaint::Candidate`
+event names the element directly: `<p class="mb-4 ... animate-pulse">Loading N%</p>` —
+the loading overlay's own text (`HomePage.jsx`), not any piece of real Hero/page content. Two
+compounding causes, both fixed:
+
+- **No `<Suspense>` boundary existed anywhere in the app.** `GeminiStar`'s `useGLTF` call suspends
+  while `3d-star.glb` loads; with nothing to catch that, React has nowhere to localize the wait
+  except the app root, serializing the *entire* initial commit — including this already-ready,
+  dependency-free text — behind a 3D-model fetch it has nothing to do with. Fixed by wrapping just
+  `<Float><GeminiStar/></Float>` in `<Suspense fallback={null}>` inside the Canvas (the standard
+  R3F/drei pattern).
+- **The whole route shipped as one 436 KB-gzip JS bundle**, including `ProjectPage` (its own GSAP
+  timelines and a second R3F canvas, `ReelIntro`, that `/` never uses) and, more significantly,
+  three.js/`@react-three/fiber`/`@react-three/drei` — used only by `Hero`, needed by nothing else
+  on `/` at first paint. Fixed by code-splitting `ProjectPage` via `React.lazy` (`src/App.jsx`) and,
+  the larger win, making `Hero` itself `React.lazy` from `HomePage.jsx`: it sits fully behind the
+  opaque loading overlay until `isReady` regardless, so deferring its module has no visible cost.
+  Verified safe against the `isReady` gate specifically: `useProgress`'s zustand store initializes
+  at `progress: 0`, not 100 (read directly from `node_modules/@react-three/drei/core/Progress.js`),
+  so nothing can flip `isReady` early just because `Hero` hasn't mounted yet.
+
+**A regression this introduced was caught before being reported, not after.** Lazy-loading `Hero`
+with `<Suspense fallback={null}>` means nothing reserves `Hero`'s own `min-h-screen` box while its
+chunk loads — `Works`/`About`/etc. briefly render one full viewport higher, then jump down the
+instant `Hero`'s real `<section>` mounts. Measured: CLS **0 → 1** (the maximum). Invisible to a
+viewer only because the opaque loading overlay happens to be covering the page the first time this
+happens — not something to rely on, since a cached-chunk revisit or any later remount wouldn't have
+that cover. Fixed by giving the `Suspense` a sized fallback (`<div className="min-h-screen" />`)
+that reserves the same box Hero's own section occupies, instead of `null`. Re-measured clean
+afterward (table below).
+
+One environmental trap worth recording for future Lighthouse runs on this machine: an earlier
+`npx lighthouse` invocation left an orphaned Chrome **renderer** subprocess running at ~80% CPU
+(`ps aux` showed it accumulating 13+ minutes of CPU time, `--user-data-dir=/tmp/lighthouse.*`,
+survived its own run's "Killing Chrome instance" log line). It silently contaminated several
+intermediate measurements in this pass with CPU contention until caught and killed
+(`pkill -9 -f "cache/puppeteer/chrome"`) — a stray TBT/TTI/CLS reading that looks like a regression
+is worth a `ps aux` check before it's trusted.
+
+### Verified result (Lighthouse 12.8.2, mobile, simulated throttling, clean process table)
+
+| Metric | §0.13 baseline | After this pass | Change |
+|---|---|---|---|
+| LCP | 9.0 s | **5.8 s** | −35% |
+| TBT | 148,850 ms | **23,670 ms** | −84% |
+| TTI | 178.8 s | **40.8 s** | −77% |
+| CLS | ~0 | **~0** (0.0002, same floor — regression caught and fixed, not shipped) | unchanged |
+| Speed Index | 5.5 s | 3.5 s | −36% |
+| FCP | 3.2 s | 3.1 s | ~flat |
+| Performance (lab, informational only per §0.14 item 1) | 0.35 | 0.42 | +7 pts |
+
+INP has no lab equivalent — it is a field metric by definition (real interaction latency over a
+real session) and Lighthouse cannot produce one. The closest lab proxy, max-potential-FID, improved
+1,620 ms → ~1,450 ms, consistent with the TBT drop, but is reported here only as a proxy, not as
+INP itself. Real INP requires field data (CrUX/RUM) this project doesn't yet collect.
+
+TTI/TBT are no longer target metrics for `/` per item 1 above — reported here only to show the
+Suspense/code-split fix's side effect (lighter initial JS execution helps these too, even though
+the permanent rAF loop still structurally caps TTI, per §0.13) was real and not a regression.
+
+`/projects/:slug` (`signature-reel`, now re-scoped as the lab-target page, item 1): Performance 47,
+LCP 4.4 s, TBT 3.57 s, CLS 0, max-potential-FID 220 ms — a real number to improve in Phase 9, not
+addressed this pass.
+
+### Still open, untouched this pass
+
+- Token-consumption gap: canonical tokens exist in `src/index.css` but components like
+  `AnimatedHeaderSection` still use Tailwind utilities instead of consuming them directly (§0.11).
+- Accent-contrast: `#CFA355` has never been validated for text use against the dark background;
+  `/` has 24 `color-contrast` Lighthouse failures that may share this root cause (§0.11, §0.13) —
+  now explicit, written scope inside Phase 10, Section 18 (see above), not just a repeated flag.
 
 ---
 

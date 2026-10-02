@@ -1,15 +1,27 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import ReactLenis from "lenis/react";
 import { useProgress } from "@react-three/drei";
 import { useLenisScrollSync } from "../lib/useLenisScrollSync";
 import Navbar from "../sections/Navbar";
-import Hero from "../sections/Hero";
 import ServiceSummary from "../sections/ServiceSummary";
 import Services from "../sections/Services";
 import About from "../sections/About";
 import Works from "../sections/Works";
 import ContactSummary from "../sections/ContactSummary";
 import Contact from "../sections/Contact";
+
+// Lazy, not eager like the other sections: Hero is the only thing on "/"
+// that pulls in three.js/@react-three/fiber/@react-three/drei, and until
+// `isReady` this entire section sits behind the opaque loading overlay below
+// anyway — fully invisible, so deferring its module has no visible cost.
+// Before this, those libraries shipped in the SAME bundle this page's own
+// loading-overlay text needs just to render, so a trivial, already-ready
+// string of text was serialized behind a 3D engine it has nothing to do
+// with (BLUEPRINT.md §0.14). `useProgress`'s store initializes at
+// `progress: 0`, not 100 (verified in
+// node_modules/@react-three/drei/core/Progress.js) — nothing here can start
+// the `isReady` effect below early just because Hero hasn't mounted yet.
+const Hero = lazy(() => import("../sections/Hero"));
 
 // The single-page narrative. Extracted from App.jsx unchanged so the "/"
 // route keeps its exact current behavior (loading gate, Lenis, section
@@ -89,7 +101,19 @@ const HomePage = () => {
       )}
       <div>
         <Navbar />
-        <Hero />
+        {/* fallback reserves Hero's own min-h-screen box (Hero.jsx's
+            <section id="home">) rather than rendering nothing. A null
+            fallback measured CLS 0 -> 1: with no DOM node there at all
+            while the chunk loads, Works/About/etc. render one full
+            viewport higher, then jump down the instant Hero's real
+            section mounts — a real, measured layout shift, invisible to a
+            viewer only because the opaque loading overlay happens to be
+            covering it the first time, not something to rely on (a
+            cached-chunk revisit, or any moment after the overlay is gone,
+            would show the jump). */}
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <Hero />
+        </Suspense>
         <Works />
         <About />
         <ServiceSummary />
