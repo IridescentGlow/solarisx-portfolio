@@ -30,3 +30,6 @@ public/videos/*.mp4
 .vercel
 .env*
 !.env.example
+
+# graphify knowledge-graph output — generated tooling artifact, not project source
+graphify-out/

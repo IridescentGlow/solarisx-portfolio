@@ -1067,4 +1067,122 @@ cleanly gone.
 
 ---
 
+---
+
+## 0.13 Root cause of the 148,850 ms TBT / 178.8 s TTI — profiled, not inferred (2026-10-02)
+
+Investigation only. **No fix applied**, because the effective fix is architectural and the risk
+register (Section 20) flags exactly this integration. Evidence from a 49 MB Lighthouse trace
+(`--save-assets`), not code reading.
+
+### Answers to the three questions asked
+
+**1. `frameloop` — confirmed `"always"`, and `"demand"` is NOT viable.**
+No `frameloop` prop exists anywhere in `src/`. All three Canvases (`Hero.jsx:49`,
+`ReelIntro.jsx:100`, `ReelIntro.jsx:179`) therefore use React Three Fiber's default,
+`frameloop="always"`, which requests an animation frame forever.
+
+`"demand"` renders only when `invalidate()` is called, and the hero has four things that need a
+frame continuously: the idle spin increment, the proximity-tilt `damp()` easing, the hover-scale
+easing (all `GeminiStar.jsx:761`), and six `THREE.VideoTexture`s that freeze into stills if the
+loop stops. Switching to `"demand"` would not be a tuning change — it would delete the hero's
+motion design.
+
+**2. ScrollTrigger is NOT refreshing per scroll event — hypothesis negative.**
+`useLenisScrollSync.js:30-32` calls `ScrollTrigger.update()` on each Lenis scroll event. That is
+the cheap per-frame position read, **not** `refresh()` (the expensive full recalculation, which
+appears nowhere in the codebase outside a resize comment). More decisively: **Lighthouse never
+scrolls the page**, so every scrub-linked trigger on `/` (`About.jsx:24`, `ServiceSummary.jsx`
+×4, `ContactSummary.jsx:23`) contributes essentially nothing to this trace. ScrollTrigger is
+exonerated.
+
+**3. Continuous loops — two on `/`, both by design.**
+`Hero.jsx:49`'s R3F rAF loop, and `useLenisScrollSync.js:39`'s `gsap.ticker.add(update)` driving
+`lenis.raf`. The `gsap.ticker` callbacks in `BentoObject.jsx:185` / `BentoSection.jsx:189` are
+ProjectPage-only. No `setInterval` anywhere. The `useFrame` body itself is cheap — a few
+`damp()` calls and a scale write.
+
+### What the trace actually shows
+
+| Signal | Value |
+|---|---|
+| Long tasks | 20, spanning **@4,509 ms → @175,453 ms** — never stops |
+| `RequestAnimationFrame` / `FireAnimationFrame` | 1,704 / 1,701 |
+| `DroppedFrame` | 2,161 |
+| `Commit` (compositor) | **36,463 ms** |
+| `GPUTask` | **35,892 ms** |
+| All JS (`FunctionCall` + `v8.callFunction` + `FireAnimationFrame`) | ~20,700 ms |
+| Main-thread "Other" | **148,090 ms of 179,000 ms (83%)** |
+
+Startup tasks cluster at 4–11 s; after that a steady stream of ~460–513 ms tasks continues to
+the end of the trace. The dominant cost is **compositor/GPU frame production, not script**.
+
+### The falsified hypothesis (why this section exists)
+
+The obvious reading was "six `VideoTexture`s re-upload to the GPU every frame
+(`GeminiStar.jsx:320`) — that's the 148 s." It was tested by disabling the video textures
+entirely and re-measuring:
+
+| Metric | With video | No video |
+|---|---|---|
+| Performance | 35 | 36 |
+| Total Blocking Time | 148,850 ms | 137,400 ms |
+| Time to Interactive | 178.8 s | 179.4 s |
+| **Main-thread total** | **179.0 s** | **179.0 s — identical** |
+| Script Evaluation | 28,325 ms | 4,967 ms |
+| "Other" | 148,090 ms | **171,167 ms — rose** |
+
+Script Evaluation collapsed by 23 s and **the total did not move**; "Other" simply absorbed it.
+Removing the single heaviest per-frame item changed the score by one point. The experiment was
+reverted; nothing from it is committed.
+
+### Root cause
+
+**The homepage never reaches idle, and that alone is what produces these numbers.** The R3F loop
+at `Hero.jsx:49` runs unconditionally for the life of the page. Lighthouse's TTI requires a
+5-second quiet window on the main thread; a perpetual rAF loop guarantees one never occurs, so
+TTI resolves to roughly the end of the trace (178.8 s) and TBT accumulates against that span.
+Main-thread total ≈ trace duration is the tell: 179.0 s in both runs above, independent of how
+much work the frames actually do.
+
+This is **not** a "heavy page" problem to optimise away. Making each frame cheaper does not help
+— proven above. Only stopping the loop helps, and the loop is the hero.
+
+Two caveats on the absolute numbers: the audit environment has **no GPU** — Chrome headless
+reports `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)`, so
+every frame is software-rasterised on the CPU, inflating `Commit`/`GPUTask` well beyond what a
+real phone with a GPU would pay. And `totalTaskTime` is 44,749 ms against a 179,000 ms
+main-thread figure, consistent with "mostly not-idle" rather than "mostly busy".
+
+### The real conflict this surfaces
+
+**Section 21's "mobile Lighthouse performance ≥ 95" is unattainable for any design with a
+permanently-animating WebGL hero.** That is not a statement about this implementation's quality
+— it is structural to how lab TTI/TBT are defined. Sections 9 and 11 require a signature 3D
+motif in the Hero; Section 21 requires a lab score that a continuously-rendering canvas cannot
+produce. **These two requirements are in direct conflict and the blueprint does not acknowledge
+it.** It needs an explicit decision, not an optimisation pass.
+
+### Options, none applied pending sign-off
+
+1. **Re-scope the performance criterion to field metrics.** LCP (9.0 s here, fixable), CLS
+   (already 0) and INP are what users and Core Web Vitals actually measure; TTI is deprecated in
+   Lighthouse's own scoring direction and TBT is a lab proxy. Keep a lab target for
+   `/projects/:slug` (currently 68, a real number to improve) and judge `/` on LCP/CLS/INP.
+   *Lowest risk, highest honesty.*
+2. **Pause the loop when the canvas is off-screen** — Section 11 already mandates this
+   ("isolate any R3F canvas so it can be unmounted/paused when its frame isn't in view"). Scoped
+   and additive via the `IntersectionObserver` already added in §0.12. **It will not change this
+   score** (the hero is in view for the whole audit, which never scrolls), but it is real battery
+   and thermal benefit on mobile. Worth doing on its own merit, not as a metric fix.
+3. **Stop the loop once the hero settles** — render on demand after the entrance completes,
+   invalidating only on pointer interaction, and accept that idle spin and the video textures
+   stop when untouched. This *would* move the metric. It is a deliberate change to the hero's
+   motion design and belongs to Phase 4, with the Section 20 feature-flag/rollback discipline.
+
+Fixing LCP (9.0 s) is a separate, non-architectural thread and the most valuable next
+performance work regardless of which option is chosen.
+
+---
+
 *End of Phase 0 findings.*
