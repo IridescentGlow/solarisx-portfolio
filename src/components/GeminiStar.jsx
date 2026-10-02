@@ -286,7 +286,19 @@ function applyCoverFit(texture, videoAspect, regionAspect) {
 // instead of an undefined/black texture, so the star never looks broken
 // while clips are loading — and stays that way indefinitely if a clip
 // fails to load at all, which is the correct fallback, not an error state.
-function useStarVideoTextures(slots, regionAspects) {
+// `canvasEl` is the WebGL canvas (gl.domElement). These <video> elements are
+// never in the DOM — they exist only as VideoTexture sources — so they cannot
+// carry a `poster` attribute and cannot themselves be observed by an
+// IntersectionObserver. The canvas they feed CAN be, so viewport-gating
+// happens there, and the already-existing plain-glass fallback for a
+// not-yet-ready region serves as the poster equivalent.
+//
+// On the homepage the hero canvas is in view on arrival, so this does not
+// reduce `/`'s initial bytes — it matters when the star is NOT the first
+// thing on screen (a restored scroll position, or a deep link landing further
+// down the page), where six clips would otherwise be fetched for a star
+// nobody is looking at.
+function useStarVideoTextures(slots, regionAspects, canvasEl) {
   const [entries, setEntries] = useState(() =>
     slots.map(() => ({ texture: null, ready: false }))
   );
@@ -342,16 +354,45 @@ function useStarVideoTextures(slots, regionAspects) {
         });
       };
       video.addEventListener("loadeddata", onReady);
-      video.src = slots[i].src;
-      // Autoplay can be blocked under unusual browser policy configs even
-      // when muted; the plain-glass fallback above covers that case too,
-      // so a rejected play() is not surfaced as an error.
-      video.play().catch(() => {});
       return onReady;
     });
 
+    // Attaching src is what triggers the fetch, so that is what gets gated.
+    const attach = () => {
+      if (cancelled) return;
+      videos.forEach((video, i) => {
+        if (video.src) return;
+        video.src = slots[i].src;
+        // Autoplay can be blocked under unusual browser policy configs even
+        // when muted; the plain-glass fallback above covers that case too,
+        // so a rejected play() is not surfaced as an error.
+        video.play().catch(() => {});
+      });
+    };
+
+    // No canvas yet, or no IntersectionObserver (old browser, test stub) must
+    // not mean a permanently plain-glass star — attach immediately, which is
+    // the pre-existing behaviour.
+    let observer;
+    if (!canvasEl || typeof IntersectionObserver === "undefined") {
+      attach();
+    } else {
+      observer = new IntersectionObserver(
+        (obsEntries) => {
+          if (!obsEntries.some((e) => e.isIntersecting)) return;
+          attach();
+          observer.disconnect();
+        },
+        // Same 200px head start the other viewport-gated media on this site
+        // uses (Works.jsx, ProjectPage.jsx's gallery observer).
+        { rootMargin: "200px" }
+      );
+      observer.observe(canvasEl);
+    }
+
     return () => {
       cancelled = true;
+      if (observer) observer.disconnect();
       videos.forEach((video, i) => {
         video.removeEventListener("loadeddata", handlers[i]);
         video.pause();
@@ -360,7 +401,7 @@ function useStarVideoTextures(slots, regionAspects) {
         textures[i].dispose();
       });
     };
-  }, [slots, regionAspects]);
+  }, [slots, regionAspects, canvasEl]);
 
   return entries;
 }
@@ -529,7 +570,11 @@ export function GeminiStar({ scale = 1, ...props }) {
       };
     }, [nodes]);
 
-  const videoEntries = useStarVideoTextures(GEMINI_VIDEO_SLOTS, regionAspects);
+  const videoEntries = useStarVideoTextures(
+    GEMINI_VIDEO_SLOTS,
+    regionAspects,
+    gl.domElement
+  );
 
   // Entrance: fast drop from above with 2.5 horizontal turns taken DURING
   // the fall, a hard deceleration, then a soft settle straight into the idle

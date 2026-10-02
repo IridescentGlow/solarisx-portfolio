@@ -832,7 +832,7 @@ workaround.
 |---|---|---|---|
 | **Total transfer** | 20,425 KiB | **5,111 KiB** | **−75%** |
 | of which Media | 17,638 KiB | **2,237 KiB** | **−87%** |
-| Main-thread work | 179.6 s | **20.5 s** | **−89%** |
+| Main-thread work | 179.6 s | ~~20.5 s~~ | ~~−89%~~ — **unverified, does not reproduce; see §0.12** |
 | Script bootup | 94.1 s | **4.8 s** | **−95%** |
 | First Contentful Paint | 4.1 s | 4.1 s | unchanged |
 | Speed Index | 4.1 s | 4.1 s | unchanged (regression reverted) |
@@ -973,6 +973,97 @@ to move it. `npm run lint` clean, `npm run build` green, and the preload tags su
   still uses Tailwind utility classes and the bespoke `banner-text-responsive` rather than
   `--text-display` / `--text-h1`. Wiring components onto the token scale is real, unscheduled
   work that no blueprint phase currently owns.
+
+---
+
+---
+
+## 0.12 `NO_LCP` resolved — the homepage now returns a real Performance score (2026-10-02)
+
+The blocker carried since §0.6 is fixed. **Mobile Performance on `/` went from `null` to a
+numeric score.** The cause was never media weight, and the fix was six lines.
+
+### What the request assumed, and what was actually true
+
+This pass was requested as "poster-image-first for every eager video (reel.mp4, the six
+GeminiStar texture videos), with real video source deferred via IntersectionObserver." Two
+parts of that premise did not survive contact with the repo:
+
+1. **`reel.mp4` was already deferred.** `Works.jsx` has been poster-first since §0.10 —
+   `poster={project.poster}`, `preload="none"`, no `src` until an `IntersectionObserver`
+   attaches it. The baseline audit for this pass confirms it directly: `reel.mp4` does not
+   appear in `/`'s network requests at all, and the only media left is the 2,237 KiB of star
+   textures.
+2. **Poster-first cannot apply to the six star clips.** They are
+   `document.createElement("video")` (`GeminiStar.jsx:296`) used as `THREE.VideoTexture`
+   sources and are **never attached to the DOM** — the file says so at :280-282. A `poster`
+   attribute does nothing on a detached element, and `IntersectionObserver` cannot observe a
+   node outside the document. The star's existing plain-glass fallback already *is* the poster
+   equivalent.
+
+More importantly, media was already ruled out as the cause: §0.10 cut it 87% (20.4 MB → 2.2 MB)
+and `NO_LCP` did not move.
+
+### The actual cause — an `opacity-0` wrapper
+
+`HomePage.jsx` gated all five frames behind `opacity-0` until `useProgress()` hit 100:
+
+```jsx
+<div className={`${isReady ? "opacity-100" : "opacity-0"} transition-opacity duration-1000`}>
+```
+
+Chrome emits Largest-Contentful-Paint candidates **at paint time**. Content painted inside an
+`opacity: 0` ancestor is not a candidate, and later animating that opacity to 1 emits no new
+candidate, because no fresh first paint occurs. Meanwhile the loading overlay — the only thing
+painting at full opacity — was **unmounted** the instant `isReady` flipped, invalidating the one
+candidate it had supplied. Net result: zero surviving candidates, matching the trace exactly
+(0 `largestContentfulPaint::Candidate` events, 4 `Invalidate` events).
+
+This is also why §0.10's controlled comparison held: `/projects/medihelp` runs the same
+`AnimatedHeaderSection` with the same `gsap.from(..., {opacity: 0})` entrance and reported LCP
+normally — it has no `useProgress` wrapper.
+
+**The fix inverts the crossfade.** Content now paints at full opacity from the first frame,
+hidden behind the opaque full-viewport overlay, and the *overlay* fades itself out to reveal it
+(unmounted on a timer matched to its own `duration-700`). Visually equivalent — verified by
+screenshot at 390×844: star, headline and positioning statement all render correctly, overlay
+cleanly gone.
+
+### Verified result (Lighthouse 12.8.2, mobile, simulated)
+
+| Metric | Before | After |
+|---|---|---|
+| **Performance score** | **`null` (NO_LCP)** | **35** |
+| Largest Contentful Paint | `ERR NO_LCP` | **9.0 s** |
+| Total Blocking Time | `ERR NO_LCP` | **148,850 ms** |
+| Time to Interactive | `ERR NO_LCP` | **178.8 s** |
+| First Contentful Paint | 3.2 s | 3.2 s |
+| Speed Index | 4.8 s | 5.5 s |
+| CLS | 0 | 0 |
+| media / total transfer | 2,237 / 5,059 KiB | 2,237 / 5,059 KiB |
+| Accessibility / Best Practices / SEO | 96 / 100 / 92 | **96 / 100 / 92** |
+
+`npm run lint` clean, `npm run build` green.
+
+### Three honest caveats
+
+1. **The star-texture `IntersectionObserver` changed nothing on `/`.** It was implemented
+   (gating `src` attachment on the canvas via `gl.domElement`, the only observable surface a
+   WebGL texture has), but media transfer is byte-identical before and after — because the hero
+   canvas is in view on arrival, so the observer fires immediately. It is still correct for the
+   case it was built for: a restored scroll position or a deep link landing below the hero, where
+   six clips would otherwise load for a star nobody is looking at. It is **not** a performance
+   win for the homepage and is not claimed as one.
+2. **A score of 35 is not success, it is the start of measurement.** The target in Section 21 is
+   ≥ 95. What this fix bought is the ability to *see* the problem: TBT of **148,850 ms** and TTI
+   of **178.8 s** were previously hidden behind `NO_LCP`. Those are the real remaining defect,
+   and they are main-thread work (R3F + GSAP), not payload.
+3. **Correction to §0.10's main-thread figure.** That section reports main-thread work falling
+   179.6 s → 20.5 s (−89%). **That does not reproduce.** Both runs in this pass measure ~179 s
+   on builds whose media is identical to the one that produced 20.5 s. The metric appears highly
+   variable on this page under simulated throttling, so the 20.5 s reading should be treated as
+   an outlier and the −89% claim in §0.10 as **unverified**. The transfer-size reductions in
+   §0.10 and §0.11 were each confirmed across multiple runs and stand unchanged.
 
 ---
 
