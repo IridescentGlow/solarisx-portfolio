@@ -50,14 +50,6 @@ const GLASS_PROPS = {
   iridescenceThicknessRange: [100, 400],
 };
 
-// Emissive copy of the footage on top of the diffuse map, same reason as
-// GeminiStar: ambient is deliberately low and the softboxes are grazing, so a
-// purely diffuse map has almost nothing to bounce and the footage reads muddy.
-// Lower than GeminiStar's 0.85: that value was tuned for footage sampled
-// through smoked glass at low opacity, whereas these blades are opaque, so the
-// same figure plus the studio rig blows the footage out to white.
-const VIDEO_EMISSIVE_INTENSITY = 0.5;
-
 // Resolves the theme's own token values so the ruler is drawn in the same ink
 // the rest of the page uses, and follows a runtime theme flip. Same
 // `data-theme` contract GeminiStar's useIsDarkTheme uses.
@@ -332,11 +324,17 @@ function useBladeMaterials(footage, ink) {
       Array.from({ length: BLADE_COUNT }, () =>
         createBladeMaterial({
           ...GLASS_PROPS,
-          color: footage ? "#ffffff" : ink,
+          // Footage blades are emissive-driven and unlit by tone mapping. The
+          // diffuse term with a white albedo lifted a mid-grey source by ~80
+          // levels under the Hero's softbox rig, which is what blew the light
+          // theme out to near-white; measured on a 128-grey test source, this
+          // setup holds it at ~157 with the glass highlights still present.
+          color: footage ? "#000000" : ink,
           map: footage ?? null,
           emissiveMap: footage ?? null,
           emissive: footage ? "#ffffff" : "#000000",
-          emissiveIntensity: footage ? VIDEO_EMISSIVE_INTENSITY : 0,
+          emissiveIntensity: footage ? 1 : 0,
+          toneMapped: !footage,
           envMapIntensity: 1,
           // Opaque. Six translucent plates stacked on each other depth-sort
           // into a milky mass and the hexagonal hole stops reading at all —
