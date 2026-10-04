@@ -193,6 +193,131 @@ Requirements:
 
 ---
 
+### 9.1 Phase 2 decision — **The Gate**: an aperture read as a timeline, not a lens (2026-10-04)
+
+**Decision (user, 2026-10-04):** the motif is the aperture/iris direction, grounded in the reel
+footage. Two other candidates (the existing glass star reduced to its edge drawing; a radial
+waveform) were considered and declined — the star because its four-point silhouette is the Gemini
+sparkle family that `src/components/reel/StarField2D.jsx:7-16` names outright, which is the
+AI-brand adjacency Section 21's "no generic AI/SaaS treatment" exists to prevent; the waveform
+because it would *state* sound design on a site that currently carries no sound, where the
+Definition of Done asks the site to *demonstrate* the practice.
+
+**Name: the Gate.** In film the gate is the aperture plate where the frame physically sits —
+"gate weave", "check the gate". It is an aperture term from the cutting room and the camera
+body, not from a phone camera UI, and it names the thing this motif actually is: the plate a
+frame is held in.
+
+#### The refinement — what a camera app would not do
+
+The risk logged against this direction was that an iris reads as a generic camera glyph. Four
+decisions push the execution to an editing-timeline reading instead. Each is load-bearing; drop
+them and the glyph risk returns.
+
+1. **Six blades carrying six discrete footage segments.** A camera iris shows one continuous
+   image *through* the opening. The Gate shows footage *on the blades themselves* — six
+   simultaneous moments of the reel, one per blade, read as a contact sheet / multicam split,
+   never as one clip behind a hole.
+2. **A timecode ring.** Outside the iris sits a ruler: minor ticks at frame intervals, major
+   ticks at second intervals carrying small numeric labels. This is canon §3's "Editing-timeline
+   UI (Premiere/Resolve/AE) — precise alignment, functional typography", applied literally. It is
+   also the single clearest non-camera signal in the composition.
+3. **A playhead, with in/out brackets — and the iris is driven by it.** One tick travels the
+   ring; two bracket marks denote an in/out range. **Aperture opening is a readout of playhead
+   position within that range, not an exposure control.** That inverts the metaphor: this is a
+   scrub position being displayed, which is why it is a timeline instrument rather than a lens.
+4. **Blades move on a staggered lead/trail, not as a mechanical shutter.** Canon §6 requires
+   "lead/trail transitions — next frame enters slightly before previous exits (J-cut/L-cut
+   logic)". Blades therefore open in a staggered cascade on `--ease-connective`, reading as an
+   edit rhythm. A real iris snaps all blades in unison; that is precisely the reading to avoid.
+
+#### The three required states (Section 9)
+
+| State | Where | Form |
+|---|---|---|
+| **Full** | Hero (Direction C moment, canon §1) | R3F. Six glass blades sharing `GLASS_PROPS` with `GeminiStar.jsx` for material continuity; **one** `VideoTexture`, segmented per blade by baked UVs; timecode ring; playhead. Hover uses `--ease-revelation`/`--duration-revelation` — `DESIGN_SYSTEM_TOKENS.md:177` names the signature 3D element as the one component where those tokens are expected |
+| **Reduced** | Transitions, loading | SVG line-form. Blade outlines + tick ring + playhead, stroke only, **no footage and no WebGL** — so a loading state never spins up a GL context. Draw-on via `stroke-dashoffset`; iris close/open is the transition beat; playhead sweep carries loading progress |
+| **Minimal** | Footer, favicon | SVG mark: ring + six blade seams + one playhead notch, solid ink, no labels (unreadable below ~24px). The off-axis playhead notch is what keeps the mark identifiably *this* and not a generic hexagon or shutter icon |
+
+**One silhouette source.** Blade count, blade profile, tick counts and playhead angle live in a
+single module consumed by all three states, following the `geminiVideos.js` +
+`starVideoRegions.js` precedent where one array drives both geometry and content so the two
+cannot drift. Three hand-drawn states that merely resemble each other would not be an identity
+system.
+
+**Direction C scope.** Only the full state is a Direction C exception. Reduced and minimal are
+Direction A — restrained, instrument-like, no overshoot — so the mark does not read as a break in
+composure every time it appears (canon §1's closing rule).
+
+#### Asset requirement, stated before build
+
+The full state wants **one 3×2 grid composite video** — six moments of the reel in one file,
+silent, encoded to the §0.10 budget class (CRF ~26, audio stripped). One file means **one decode
+instead of six**, which is §0.9's point 2: the motif's reduced/minimal states and the media-cost
+fix are the same work. Until that composite exists, the component samples six cells from an
+existing clip, which reads as six *crops* of one frame rather than six moments — a visible
+placeholder, not the design.
+
+#### Risks carried into the build
+
+- **Cell resolution.** Six cells of a 640×360-class grid are ~213×180 each — likely too soft on a
+  large hero blade. The composite may need to be 1280×720 (cells ~426×240) or larger. To be
+  measured on the real render, not assumed.
+- **Glyph risk is mitigated, not eliminated.** The four refinements above are the mitigation;
+  whether the mark still reads as a camera shutter at favicon scale must be checked visually at
+  16/24/32px, since the timecode ring — the strongest non-camera signal — is exactly what drops
+  out at that size.
+- **Radial symmetry fights `COMPOSITION_PRINCIPLES.md` §5.** That section flags the Opening Frame
+  failure of "text and signature object both independently centered — coincidence, not
+  composition", and a concentric ring is the most centrable form possible. The Hero wiring (a
+  separate sign-off) must therefore place the Gate deliberately — off-centre, cropped by a frame
+  edge, or anchoring the headline — and §5 asks to be revisited specifically once the real asset
+  exists. It now does.
+
+#### Built — Phase 2 isolation (2026-10-04)
+
+Phase 2's acceptance criterion ("renders correctly in all three states in isolation, before it's
+wired into transitions") is met. **Not wired into the Hero or the transition system** — a dev-only
+`/motif-lab` route is the only mount, registered behind `import.meta.env.DEV`, and the production
+bundle was checked to contain no trace of the motif or the lab.
+
+| File | Role |
+|---|---|
+| `src/lib/apertureGeometry.js` | The one silhouette source. Three.js-free, so the SVG states never pull the WebGL chunk back onto the critical path (§0.14) |
+| `src/components/motif/ApertureGateFull.jsx` | Full state — R3F scene content only; no Canvas, no lights |
+| `src/components/motif/ApertureGateReduced.jsx` | Reduced state — SVG line-form, no WebGL |
+| `src/components/motif/ApertureGateMark.jsx` | Minimal state — filled SVG mark |
+| `src/pages/MotifLab.jsx` | The isolation harness; owns the Canvas and reuses Hero.jsx's exact lighting rig |
+
+**Three geometry findings, all measured on the render rather than styled by eye.** They are
+recorded because each one looks correct right up until it is checked:
+
+1. **Only one swing direction actually opens the iris.** The other keeps every blade inside the
+   housing and looks tidy in the numbers, but the centre stays covered at every angle — it never
+   opens. The test that catches it is whether the origin is *outside all six blades*, not how far
+   the nearest blade edge sits from it.
+2. **Opening necessarily throws blades outside the housing, so both states clip.** The SVG uses a
+   `clipPath`; the 3D uses a radial `discard` whose clip centre is derived per blade
+   (`|v_local + Rot(-φ)·pivot| ≤ APERTURE_R`), which avoids a per-frame matrix inversion and stays
+   correct under any transform applied to the gate. A background-coloured mask ring was rejected:
+   it breaks the moment anything sits behind the canvas.
+3. **Build radius and housing radius have to differ.** Building blades against the same disc they
+   are clipped to caps the hole at ~0.19, because the blades' own outer arcs rotate off the rim and
+   open wedge gaps right at the edge. Oversizing the blades (build 1.15, housing 0.80) puts those
+   gaps outside the housing — where a real iris also hides them — and the hole reaches 0.27 with
+   the aperture still reading as solid. The SVG hid this bug for a while because its blade fill is
+   the page background, so the gaps were invisible there and only showed once footage was mapped.
+
+**Verified:** all three states in both themes; the mark at 16/24/32/64/128px and inverted on ink;
+`npm run lint` clean; `npm run build` green; no console errors or exceptions.
+
+**Deferred, unchanged from the risks above:** the 3×2 grid composite does not exist, so the full
+state currently samples six crops of one clip and the footage is visibly soft — the cell-resolution
+risk, now confirmed on the render rather than predicted. The Hero placement question
+(`COMPOSITION_PRINCIPLES.md` §5) is untouched and belongs to the wiring sign-off.
+
+---
+
 ## 10. Project (Case Study) System
 
 - Routing: resolve whichever conflict Phase 0 actually finds live in the repo (see Phase 0 findings) — don't assume this blueprint's original recommendation is still correct once real findings exist

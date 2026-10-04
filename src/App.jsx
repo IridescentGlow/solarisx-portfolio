@@ -15,6 +15,14 @@ import { useDocumentMeta } from "./lib/useDocumentMeta";
 // visit to "/" no longer pays for a page it isn't showing.
 const ProjectPage = lazy(() => import("./pages/ProjectPage"));
 
+// Phase 2's isolation harness for the signature motif (BLUEPRINT.md §9.1),
+// behind `import.meta.env.DEV` so the branch is statically dead in a
+// production build and neither the route nor its chunk ships. The motif is not
+// wired into the Hero or the transition system yet — this is the only mount.
+const MotifLab = import.meta.env.DEV
+  ? lazy(() => import("./pages/MotifLab"))
+  : null;
+
 const App = () => {
   // Head correctness for client-side navigation only. Cold loads already
   // arrive with the right tags from scripts/prerender-meta.mjs — see seo.js.
@@ -34,6 +42,16 @@ const App = () => {
             </Suspense>
           }
         />
+        {MotifLab ? (
+          <Route
+            path="/motif-lab"
+            element={
+              <Suspense fallback={null}>
+                <MotifLab />
+              </Suspense>
+            }
+          />
+        ) : null}
       </Routes>
     </>
   );
