@@ -111,7 +111,7 @@ const MotifLab = () => {
       <div className="grid gap-12 mt-10 lg:grid-cols-2">
         <Panel
           title="Full — Hero (Direction C)"
-          note="Six glass blades, one video texture segmented per blade by baked UVs. Footage is currently six crops of one clip: the 3x2 grid composite named in §9.1 does not exist yet."
+          note="Six glass blades, one video texture segmented per blade by baked UVs. Footage is the 3x2 composite from scripts/build-gate-grid.sh: six moments of one 2.32s reel segment, one per blade."
         >
           <div className="w-full aspect-square max-w-[520px] rounded border border-ink/10">
             <Canvas
