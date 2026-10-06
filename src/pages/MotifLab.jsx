@@ -111,7 +111,7 @@ const MotifLab = () => {
       <div className="grid gap-12 mt-10 lg:grid-cols-2">
         <Panel
           title="Full — Hero (Direction C)"
-          note="Six glass blades, one video texture segmented per blade by baked UVs. Footage is the 3x2 composite from scripts/build-gate-grid.sh: six moments of one 2.32s reel segment, one per blade."
+          note="Six blades sampling one canvas, six cells. The playhead drives video.currentTime, and each blade cuts in when the playhead crosses its edit point — the blade ahead of the playhead stays live, the ones behind hold the frame they were cut on."
         >
           <div className="w-full aspect-square max-w-[520px] rounded border border-ink/10">
             <Canvas
@@ -123,6 +123,11 @@ const MotifLab = () => {
             >
               <ambientLight intensity={0.12} />
               <ApertureGateFull
+                // Dev-only: lets the verification harness read the element's
+                // real currentTime instead of inferring it from pixels.
+                onVideo={(v) => {
+                  window.__gateVideo = v;
+                }}
                 progress={progress}
                 footageSrc={showFootage ? FOOTAGE_SRC : null}
                 scale={1}

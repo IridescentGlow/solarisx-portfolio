@@ -337,3 +337,30 @@ export function reducedBladeTransform(i, openT) {
     4
   )} ${py.toFixed(4)})`;
 }
+
+// --- Edit points -----------------------------------------------------------
+//
+// Six cut points spread across the in/out range, one per blade. The playhead
+// crossing a cut point is what fills that blade, so scrubbing forward cuts the
+// blades in one at a time and scrubbing back un-cuts them. This is what makes
+// the aperture a readout of a scrub rather than an ambient rotation
+// (BLUEPRINT.md §9.1, refinement 3): the blade ahead of the playhead is live
+// and tracks the footage, the ones behind it hold the frame they were cut on.
+export const bladeCutProgress = (i) =>
+  IN_POINT + ((i + 1) * (OUT_POINT - IN_POINT)) / BLADE_COUNT;
+
+// How many blades the playhead has already cut in at this progress.
+export function cutCount(progress) {
+  let n = 0;
+  for (let i = 0; i < BLADE_COUNT; i++) if (progress >= bladeCutProgress(i)) n++;
+  return n;
+}
+
+// Maps progress onto the clip's own timeline, clamped to the in/out range, so
+// the playhead literally is the video's current time.
+export const progressToMediaTime = (progress, duration) => {
+  if (!duration) return 0;
+  const span = OUT_POINT - IN_POINT;
+  const t = (clamp(progress, IN_POINT, OUT_POINT) - IN_POINT) / span;
+  return t * duration;
+};

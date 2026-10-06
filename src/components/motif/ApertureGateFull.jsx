@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
 import {
   APERTURE_R,
   BLADE_COUNT,
@@ -11,6 +12,8 @@ import {
   bladeBaseAngleDeg,
   openFromProgress,
   playheadMark,
+  cutCount,
+  progressToMediaTime,
   rangeBrackets,
   tickMarks,
   uvCell,
@@ -136,38 +139,59 @@ function useRulerTexture(ink) {
   }, [ink]);
 }
 
-// One video element, one texture, six cells. A camera iris shows one continuous
-// image through its opening; the Gate shows six simultaneous moments ON the
-// blades, which is the whole "contact sheet, not lens" refinement (§9.1
-// refinement 1) — and it costs one decode instead of six, which is §0.9's
-// point 2.
-function useFootageTexture(src) {
-  const [state, setState] = useState({ texture: null, aspect: null });
+// One video element, one canvas, six cells — and the video is PAUSED. Its
+// currentTime is driven by the playhead (BLUEPRINT.md §9.1, refinement 3), so
+// scrubbing the ring genuinely moves the footage instead of the clip
+// free-running beside an indicator that only looks related.
+//
+// The canvas is what the blades actually sample. Each cell holds the frame
+// that blade was cut on, which is why blades can hold stills independently
+// while one stays live — a VideoTexture cannot do that, because every cell of
+// it advances together.
+function useFootageBoard(src) {
+  const [state, setState] = useState({ texture: null, aspect: null, video: null, board: null });
 
   useEffect(() => {
     if (!src) return undefined;
     const video = document.createElement("video");
     video.muted = true;
-    video.loop = true;
+    video.loop = false;
     video.playsInline = true;
-    video.autoplay = true;
-    // `metadata`, never `auto` — PROJECT_PAGE_SYSTEM.md §6.
+    // Paused and seek-driven: the playhead owns the time.
+    video.autoplay = false;
+    // `metadata`, never `auto` — PROJECT_PAGE_SYSTEM.md §6. Seeking still
+    // fetches the ranges it needs.
     video.preload = "metadata";
-
-    const texture = new THREE.VideoTexture(video);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.generateMipmaps = false;
 
     let cancelled = false;
     const onReady = () => {
       if (cancelled) return;
-      setState({ texture, aspect: video.videoWidth / video.videoHeight });
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d", { willReadFrequently: false });
+      // Empty slots rather than black panels: an uncut blade reads as a segment
+      // the playhead has not reached yet.
+      ctx.fillStyle = "#15120f";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+
+      setState({
+        texture,
+        aspect: video.videoWidth / video.videoHeight,
+        video,
+        board: { canvas, ctx },
+      });
     };
     video.addEventListener("loadeddata", onReady);
     video.src = src;
-    video.play().catch(() => {});
+    // A paused element still needs one decoded frame before it can be drawn.
+    video.load();
 
     return () => {
       cancelled = true;
@@ -175,7 +199,6 @@ function useFootageTexture(src) {
       video.pause();
       video.removeAttribute("src");
       video.load();
-      texture.dispose();
     };
   }, [src]);
 
@@ -353,15 +376,73 @@ const ApertureGateFull = ({
   progress = 0.5,
   footageSrc = null,
   scale = 1,
+  onVideo = null,
   ...props
 }) => {
   const { ink, accent } = useThemeInk();
   const ruler = useRulerTexture(ink);
-  const { texture: footage, aspect } = useFootageTexture(footageSrc);
+  const { texture: footage, aspect, video, board } = useFootageBoard(footageSrc);
   const blades = useBladeGeometries(aspect);
   const materials = useBladeMaterials(footage, ink);
   const indicators = useIndicatorGeometries();
   const openT = openFromProgress(progress);
+  // Which blades currently hold a captured frame. A ref, not state: this
+  // changes inside the render loop and must never trigger a React render.
+  const cutStates = useRef(Array(BLADE_COUNT).fill(false));
+
+  useEffect(() => {
+    if (video && onVideo) onVideo(video);
+  }, [video, onVideo]);
+
+  // The playhead seeks the clip. This is the whole point of the motif: the
+  // aperture is displaying a scrub position, so the scrub has to be real.
+  useEffect(() => {
+    if (!video || !video.duration) return;
+    const target = progressToMediaTime(progress, video.duration);
+    if (Math.abs(video.currentTime - target) > 0.02) video.currentTime = target;
+  }, [video, progress]);
+
+  useFrame(() => {
+    if (!video || !board || !footage) return;
+    const { canvas, ctx } = board;
+    const cellW = canvas.width / 3;
+    const cellH = canvas.height / 2;
+    const drawCell = (i, source) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = col * cellW;
+      const y = row * cellH;
+      if (source) ctx.drawImage(video, x, y, cellW, cellH, x, y, cellW, cellH);
+      else {
+        ctx.fillStyle = "#15120f";
+        ctx.fillRect(x, y, cellW, cellH);
+      }
+    };
+
+    const cuts = cutCount(progress);
+    let dirty = false;
+    for (let i = 0; i < BLADE_COUNT; i++) {
+      const shouldBeCut = i < cuts;
+      if (shouldBeCut && !cutStates.current[i]) {
+        // The playhead just crossed this blade's edit point: cut it in on the
+        // frame that is under the playhead right now.
+        drawCell(i, true);
+        cutStates.current[i] = true;
+        dirty = true;
+      } else if (!shouldBeCut && cutStates.current[i]) {
+        drawCell(i, false);
+        cutStates.current[i] = false;
+        dirty = true;
+      }
+    }
+    // The blade ahead of the playhead stays live, so a scrub is visible as
+    // motion rather than only as the next cut landing.
+    if (cuts < BLADE_COUNT && video.readyState >= 2) {
+      drawCell(cuts, true);
+      dirty = true;
+    }
+    if (dirty) footage.needsUpdate = true;
+  });
 
   useEffect(() => {
     return () => {
@@ -370,8 +451,9 @@ const ApertureGateFull = ({
       indicators.playhead.dispose();
       indicators.brackets.dispose();
       ruler?.dispose();
+      footage?.dispose();
     };
-  }, [blades, materials, indicators, ruler]);
+  }, [blades, materials, indicators, ruler, footage]);
 
   const view = (LABEL_R + 0.11) * 2;
 
