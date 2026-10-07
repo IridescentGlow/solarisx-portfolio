@@ -53,6 +53,29 @@ const GLASS_PROPS = {
   iridescenceThicknessRange: [100, 400],
 };
 
+// An uncut slot has to read as an empty slot, not as a dark blade. Darkening
+// the canvas fill cannot achieve that: with GLASS_PROPS the clearcoat layer at
+// roughness 0.05 reflects the Hero's softbox rig independently of albedo, which
+// is what lifted a near-black fill to ~100 on the render. The cause is
+// reflectance, not albedo, so every reflective and emissive term comes off
+// here, and the diffuse term is starved by envMapIntensity 0 as well as by the
+// colour. Same lesson as the footage-blade blowout, in the other direction.
+const EMPTY_SLOT_PROPS = {
+  color: "#0b0a09",
+  roughness: 1,
+  metalness: 0,
+  specularIntensity: 0,
+  clearcoat: 0,
+  iridescence: 0,
+  transmission: 0,
+  envMapIntensity: 0,
+  emissive: "#000000",
+  emissiveIntensity: 0,
+  toneMapped: false,
+  transparent: false,
+  side: THREE.DoubleSide,
+};
+
 // Resolves the theme's own token values so the ruler is drawn in the same ink
 // the rest of the page uses, and follows a runtime theme flip. Same
 // `data-theme` contract GeminiStar's useIsDarkTheme uses.
@@ -311,10 +334,13 @@ function useIndicatorGeometries() {
 // only on that blade's current swing. That makes the uniform a vec2 the
 // component can set during an ordinary React render — no useFrame, no matrix
 // inversion, and it stays correct under any transform applied to the gate.
-function createBladeMaterial(props) {
+function createBladeMaterial(props, shared) {
   const material = new THREE.MeshPhysicalMaterial(props);
-  material.userData.clipCentre = { value: new THREE.Vector2() };
-  material.userData.clipRadius = { value: APERTURE_R };
+  // Shared with the blade's sibling material on purpose: a blade swaps between
+  // its filled and empty material at runtime, and the clip has to follow the
+  // swing identically in both or the swap would change the silhouette.
+  material.userData.clipCentre = shared.clipCentre;
+  material.userData.clipRadius = shared.clipRadius;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uClipCentre = material.userData.clipCentre;
     shader.uniforms.uClipRadius = material.userData.clipRadius;
@@ -342,34 +368,45 @@ function createBladeMaterial(props) {
 // assigning one later updates the uniform but leaves a program with no sampler
 // for it — the same trap GeminiStar documents and solves with a key.
 function useBladeMaterials(footage, ink) {
-  return useMemo(
-    () =>
-      Array.from({ length: BLADE_COUNT }, () =>
-        createBladeMaterial({
-          ...GLASS_PROPS,
-          // Footage blades are emissive-driven and unlit by tone mapping. The
-          // diffuse term with a white albedo lifted a mid-grey source by ~80
-          // levels under the Hero's softbox rig, which is what blew the light
-          // theme out to near-white; measured on a 128-grey test source, this
-          // setup holds it at ~157 with the glass highlights still present.
-          color: footage ? "#000000" : ink,
-          map: footage ?? null,
-          emissiveMap: footage ?? null,
-          emissive: footage ? "#ffffff" : "#000000",
-          emissiveIntensity: footage ? 1 : 0,
-          toneMapped: !footage,
-          envMapIntensity: 1,
-          // Opaque. Six translucent plates stacked on each other depth-sort
-          // into a milky mass and the hexagonal hole stops reading at all —
-          // verified on the render. A real blade is opaque anyway; the glass
-          // character here comes from clearcoat and iridescence, which is the
-          // same conclusion GeminiStar reached when it dropped transmission.
-          transparent: false,
-          side: THREE.DoubleSide,
-        })
-      ),
-    [footage, ink]
-  );
+  return useMemo(() => {
+    const filled = [];
+    const empty = [];
+    for (let i = 0; i < BLADE_COUNT; i++) {
+      const shared = {
+        clipCentre: { value: new THREE.Vector2() },
+        clipRadius: { value: APERTURE_R },
+      };
+      filled.push(
+        createBladeMaterial(
+          {
+            ...GLASS_PROPS,
+            // Footage blades are emissive-driven and unlit by tone mapping. The
+            // diffuse term with a white albedo lifted a mid-grey source by ~80
+            // levels under the Hero's softbox rig, which is what blew the light
+            // theme out to near-white; measured on a 128-grey test source, this
+            // setup holds it at ~157 with the glass highlights still present.
+            color: footage ? "#000000" : ink,
+            map: footage ?? null,
+            emissiveMap: footage ?? null,
+            emissive: footage ? "#ffffff" : "#000000",
+            emissiveIntensity: footage ? 1 : 0,
+            toneMapped: !footage,
+            envMapIntensity: 1,
+            // Opaque. Six translucent plates stacked on each other depth-sort
+            // into a milky mass and the hexagonal hole stops reading at all —
+            // verified on the render. A real blade is opaque anyway; the glass
+            // character here comes from clearcoat and iridescence, which is the
+            // same conclusion GeminiStar reached when it dropped transmission.
+            transparent: false,
+            side: THREE.DoubleSide,
+          },
+          shared
+        )
+      );
+      if (footage) empty.push(createBladeMaterial(EMPTY_SLOT_PROPS, shared));
+    }
+    return { filled, empty };
+  }, [footage, ink]);
 }
 
 const ApertureGateFull = ({
@@ -383,12 +420,15 @@ const ApertureGateFull = ({
   const ruler = useRulerTexture(ink);
   const { texture: footage, aspect, video, board } = useFootageBoard(footageSrc);
   const blades = useBladeGeometries(aspect);
-  const materials = useBladeMaterials(footage, ink);
+  const { filled: materials, empty: emptyMaterials } = useBladeMaterials(footage, ink);
   const indicators = useIndicatorGeometries();
   const openT = openFromProgress(progress);
   // Which blades currently hold a captured frame. A ref, not state: this
   // changes inside the render loop and must never trigger a React render.
   const cutStates = useRef(Array(BLADE_COUNT).fill(false));
+  // The meshes themselves, so a blade's material can be swapped inside the
+  // loop without a React render — the same reason cutStates is a ref.
+  const bladeMeshes = useRef([]);
 
   useEffect(() => {
     if (video && onVideo) onVideo(video);
@@ -442,18 +482,30 @@ const ApertureGateFull = ({
       dirty = true;
     }
     if (dirty) footage.needsUpdate = true;
+
+    // A blade showing no footage gets the empty-slot material, so the slot
+    // reads as empty rather than as a dark glass blade.
+    for (let i = 0; i < BLADE_COUNT; i++) {
+      const mesh = bladeMeshes.current[i];
+      if (!mesh || !emptyMaterials[i]) continue;
+      const showsFootage =
+        cutStates.current[i] || (i === cuts && video.readyState >= 2);
+      const want = showsFootage ? materials[i] : emptyMaterials[i];
+      if (mesh.material !== want) mesh.material = want;
+    }
   });
 
   useEffect(() => {
     return () => {
       blades.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
+      emptyMaterials.forEach((m) => m.dispose());
       indicators.playhead.dispose();
       indicators.brackets.dispose();
       ruler?.dispose();
       footage?.dispose();
     };
-  }, [blades, materials, indicators, ruler, footage]);
+  }, [blades, materials, emptyMaterials, indicators, ruler, footage]);
 
   const view = (LABEL_R + 0.11) * 2;
 
@@ -500,7 +552,13 @@ const ApertureGateFull = ({
             <group position={[px, py, 0]} rotation={[0, 0, phi]}>
               {/* Geometry is pivot-local, so the hinge group's own position is
                   the only thing putting the blade back on the ring. */}
-              <mesh geometry={geometry} material={materials[i]} />
+              <mesh
+                ref={(m) => {
+                  bladeMeshes.current[i] = m;
+                }}
+                geometry={geometry}
+                material={materials[i]}
+              />
             </group>
           </group>
         );
