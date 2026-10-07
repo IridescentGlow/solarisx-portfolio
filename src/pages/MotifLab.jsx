@@ -187,10 +187,10 @@ const MotifLab = () => {
       <Panel
         className="mt-12"
         title="Minimal — footer / favicon"
-        note="Rendered at the sizes it has to survive. The glyph-risk check from §9.1: at 16px the ruler is gone, so the off-axis playhead notch is the only thing keeping this from reading as a generic shutter icon."
+        note="Rendered at the sizes it has to survive, drawn on a 16-unit grid so one unit is one pixel at favicon size. Figure and ground are inverted from the first attempt: the hexagonal opening carries the weight and the housing is a thin rim, broken by a wedge gap at the in-point. Below 20px the rim and seams drop out — at 16px they break into dots and the opening reads better alone."
       >
         <div className="flex flex-wrap items-end gap-10 p-6 border rounded border-ink/10">
-          {[16, 24, 32, 64, 128].map((size) => (
+          {[16, 20, 24, 32, 64, 128].map((size) => (
             <div key={size} className="flex flex-col items-center gap-2">
               <ApertureGateMark size={size} title="The Gate" />
               <span className="text-[10px] text-ink/40 tabular-nums">{size}px</span>

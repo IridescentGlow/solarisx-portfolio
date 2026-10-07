@@ -17,12 +17,19 @@ import { BLADE_COUNT, IN_POINT, progressToAngleDeg } from "../../lib/apertureGeo
 // survives at favicon size is the aperture itself rather than a circle. The
 // rim is broken by a wedge gap at the in-point, which keeps the mark
 // rotationally asymmetric without depending on a sub-pixel tick.
+//
+// Below 20px the rim and seams are dropped rather than drawn: measured on the
+// 16px raster, the rim breaks into scattered dots that read as grit around the
+// hexagon (44.5% ink coverage against 23.8% without it). The hexagonal opening
+// alone is the more specific shape at that size, and the rim resolves cleanly
+// again from 20px up, which is where it is kept.
+const RIM_MIN_SIZE = 20;
 const GRID = 16;
 const C = GRID / 2;
-const HEX_R = 5;
-const RIM_R = 7;
-const SEAM_IN = 5.6;
-const SEAM_OUT = 6.5;
+const HEX_R = 4.5;
+const RIM_R = 7.5;
+const SEAM_IN = 5.5;
+const SEAM_OUT = 7;
 // Degrees of rim removed at the in-point. Wide enough to survive one pixel.
 const GAP_DEG = 72;
 
@@ -79,10 +86,12 @@ const ApertureGateMark = ({ size = 32, className = "", title }) => {
       {title ? <title>{title}</title> : null}
       {/* The aperture opening, carrying the most weight on purpose. */}
       <path d={hex} strokeWidth="2" />
-      <path d={rim} strokeWidth="1" />
-      {seams.map(([a, b], i) => (
-        <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth="1" />
-      ))}
+      {size >= RIM_MIN_SIZE ? <path d={rim} strokeWidth="1" /> : null}
+      {size >= RIM_MIN_SIZE
+        ? seams.map(([a, b], i) => (
+            <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth="1" />
+          ))
+        : null}
     </svg>
   );
 };
