@@ -68,6 +68,20 @@ const BLADE_CENTER_D = 0.75;
 // edge is from it.)
 const MAX_OPEN_DEG = 70;
 
+// The blades never return to fully stacked. Each blade is large enough to seal
+// the aperture on its own, so at a true zero angle whichever blade is on top IS
+// the entire visible surface and the five behind it cannot be seen at all —
+// measured, not assumed: at 0 degrees one blade covers 100% of the disc, and it
+// is still 87.6% at 26 degrees. A gate whose slots cannot be told apart cannot
+// show a cut landing in one of them.
+//
+// Kept deliberately small. The stacking order does most of this work (see
+// ApertureGateFull's z offsets); this angle only has to part the blades enough
+// that the seams read at rest, and going further would trade the closed
+// resting state for nothing. The aperture is still sealed here — the hole does
+// not open until far higher angles — so rest reads as closed, not as stuck.
+const MIN_OPEN_DEG = 14;
+
 // Per-blade delay as a fraction of the open progress. Canon §6 requires
 // lead/trail (J-cut/L-cut) transitions, so the blades cascade instead of
 // snapping in unison — a shutter moves all blades together, an edit does not.
@@ -157,7 +171,8 @@ export function bladeOpenT(i, openT) {
   return clamp((openT - i * OPEN_STAGGER) / span, 0, 1);
 }
 
-export const bladeOpenDeg = (i, openT) => bladeOpenT(i, openT) * MAX_OPEN_DEG;
+export const bladeOpenDeg = (i, openT) =>
+  MIN_OPEN_DEG + bladeOpenT(i, openT) * (MAX_OPEN_DEG - MIN_OPEN_DEG);
 
 // --- Timecode ring ----------------------------------------------------------
 

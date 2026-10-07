@@ -311,10 +311,67 @@ recorded because each one looks correct right up until it is checked:
 **Verified:** all three states in both themes; the mark at 16/24/32/64/128px and inverted on ink;
 `npm run lint` clean; `npm run build` green; no console errors or exceptions.
 
-**Deferred, unchanged from the risks above:** the 3×2 grid composite does not exist, so the full
+~~**Deferred, unchanged from the risks above:** the 3×2 grid composite does not exist, so the full
 state currently samples six crops of one clip and the footage is visibly soft — the cell-resolution
-risk, now confirmed on the render rather than predicted. The Hero placement question
-(`COMPOSITION_PRINCIPLES.md` §5) is untouched and belongs to the wiring sign-off.
+risk, now confirmed on the render rather than predicted.~~ **Superseded 2026-10-06:** the composite
+was built and shipped (`public/videos/motif/gate-grid-3x2.mp4`, reproducible via
+`scripts/build-gate-grid.sh`); each blade samples its own crop. The Hero placement question
+(`COMPOSITION_PRINCIPLES.md` §5) is still untouched and belongs to the wiring sign-off.
+
+#### Built — causality, cut-ins and the mark redraw (2026-10-07)
+
+Three design failures were found by watching the lab rather than reading it: the full state read as
+"six glass video things rotating" rather than as video editing, and the minimal mark read as a plain
+circle at display size. The fixes, and what each one cost to find:
+
+1. **The playhead now drives the footage** (`progressToMediaTime` → `video.currentTime`). Verified by
+   reading the element's own `currentTime`, not by looking at pixels: progress 0.05/0.35/0.65/0.8 →
+   0 / 0.813 / 1.874 / 2.333s, paused, clamped at the out-point.
+2. **Blades hold still frames and cut in one at a time.** Each blade samples a cell of a canvas, not
+   the video, because a `VideoTexture` advances all six cells together and nothing can hold a frame.
+3. **An uncut slot renders as empty, not as a dark blade.** The cause was reflectance, not albedo:
+   clearcoat at roughness 0.05 reflects the lighting rig independently of the map, holding a
+   near-black fill at 100.3 on the render. A second material per blade, with every reflective term
+   removed, drops it to a flat 17.2.
+4. **The minimal mark was redrawn on a 16-unit pixel grid** rather than reduced from the 3D form,
+   with figure and ground inverted. The first version failed on arithmetic — in a 2.0-unit viewBox
+   its only disambiguating notch measured ~0.9px. Hexagon 4.5 / rim 7.5 gives real clearance, and
+   below 20px the rim and seams are dropped entirely (44.5% ink coverage with them against 23.8%
+   without: at that size they break into dots that read as grit).
+
+**The finding that mattered most: the blades occlude each other, and the stacking order was backwards.**
+Each blade is large enough to seal the aperture alone, so near the closed position whichever blade is
+on top *is* the entire visible surface. Three's default depth function lets the last blade drawn win,
+and the last blade to be drawn was also the last to be cut — so the first four cuts landed underneath
+and could not be seen at all. A red-tint control test is what exposed it: at progress 0.3 two blades
+held footage, yet the tinted empty blades covered the whole disc. Fixed by stacking the blade that
+cuts first nearest the camera (a per-blade z offset), plus `MIN_OPEN_DEG` so the blades never return
+to fully stacked. Measured visible area of each blade at the moment its own cut lands, as a share of
+the housing disc:
+
+| stacking | blade 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| as built (last cut on top) | 0.0 | 0.0 | 0.0 | 0.0 | ~0 | 100.0 |
+| first cut on top, MIN_OPEN_DEG 0 | 100.0 | 10.9 | 14.4 | 17.0 | 16.4 | 4.0 |
+| first cut on top, MIN_OPEN_DEG 14 | 100.0 | 14.8 | 16.8 | 18.7 | 16.6 | 4.0 |
+
+**Known limitation, for Phase 4 to account for.** Two slots never read as their own frame:
+
+- **The sixth blade tops out at ~4% of the disc**, whatever the open angle, because visibility
+  cascades down a stack of six overlapping plates and the bottom of that stack is always mostly
+  covered. A fix would mean smaller blades that cannot each seal the aperture, which trades away the
+  sealed closed state.
+- **At rest the gate reads as one sealed plate**, not as six waiting slots: at zero progress every
+  blade sits at the same angle, so the stagger that separates them has not started. Raising
+  `MIN_OPEN_DEG` to 30 was tried and rejected — the empty blades merge into a single crescent that
+  reads as a half-open gate rather than as distinct slots, which is worse.
+
+Neither blocks the Hero wiring; both constrain how much of the cut cascade can be relied on to read
+at a glance, which is a composition question for Phase 4.
+
+**Also measured and left as-is:** the software renderer used for verification takes ~9s per frame at
+this canvas size, so an earlier capture pass with a 1.8s settle was reading one playhead step behind
+and produced numbers that looked like a regression. Every figure above comes from a 9s settle.
 
 ---
 

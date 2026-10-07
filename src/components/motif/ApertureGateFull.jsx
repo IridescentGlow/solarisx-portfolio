@@ -549,7 +549,15 @@ const ApertureGateFull = ({
         );
         return (
           <group key={i} rotation={[0, 0, -bladeBaseAngleDeg(i) * DEG2RAD]}>
-            <group position={[px, py, 0]} rotation={[0, 0, phi]}>
+            {/* Stacked so the blade that cuts FIRST sits nearest the camera.
+                The blades are coplanar otherwise, and three's default depth
+                function lets the last one drawn win, which put the last blade
+                to be cut on top of every earlier one — the first four cuts
+                landed underneath and could not be seen at all. */}
+            <group
+              position={[px, py, (BLADE_COUNT - 1 - i) * 0.004]}
+              rotation={[0, 0, phi]}
+            >
               {/* Geometry is pivot-local, so the hinge group's own position is
                   the only thing putting the blade back on the ring. */}
               <mesh
